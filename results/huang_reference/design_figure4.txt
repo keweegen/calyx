@@ -1,0 +1,34 @@
+
+### PANEL Panel aΓÇôd  (n=288 files)
+  cell types (1): ['MBON-a3']
+  sessions (6): ['1hr', '24hr', '3hr', '5min', 'Mid', 'Pre']
+  CS labels: ['CS+', 'CS-']
+  cell             flies  session x CS counts
+  MBON-a3          12     1hr/CS+=24 1hr/CS-=24 24hr/CS+=24 24hr/CS-=24 3hr/CS+=24 3hr/CS-=24 5min/CS+=24 5min/CS-=24 Mid/CS+=24 Mid/CS-=24 Pre/CS+=24 Pre/CS-=24
+      same flies across all sessions: True  ({'1hr': 12, '24hr': 12, '3hr': 12, '5min': 12, 'Mid': 12, 'Pre': 12})
+
+### PANEL Panel eΓÇôh  (n=96 files)
+  cell types (1): ['PPL1-a3']
+  sessions (5): ['ACV-induced', 'ACV-shock-induced', 'OCT-induced', 'OCT-shock-induced', 'shock-induced']
+  CS labels: ['?']
+  cell             flies  session x CS counts
+  PPL1-a3          16     ACV-induced/?=16 ACV-shock-induced/?=16 OCT-induced/?=16 OCT-shock-induced/?=16 shock-induced/?=32
+      same flies across all sessions: True  ({'ACV-induced': 16, 'ACV-shock-induced': 16, 'OCT-induced': 16, 'OCT-shock-induced': 16, 'shock-induced': 16})
+
+### PANEL Panel ij  (n=192 files)
+  cell types (1): ['PPL1-a3']
+  sessions (4): ['1hr', '5min', 'Mid', 'Pre']
+  CS labels: ['CS+', 'CS-']
+  cell             flies  session x CS counts
+  PPL1-a3          12     1hr/CS+=24 1hr/CS-=24 5min/CS+=24 5min/CS-=24 Mid/CS+=24 Mid/CS-=24 Pre/CS+=24 Pre/CS-=24
+      same flies across all sessions: True  ({'1hr': 12, '5min': 12, 'Mid': 12, 'Pre': 12})
+
+### PANEL Panel lm  (n=288 files)
+  cell types (2): ['MB085C>CsChrimson', 'MB085C>W1118']
+  sessions (3): ['3hr', '5min', 'Pre']
+  CS labels: ['CS+', 'CS-']
+  cell             flies  session x CS counts
+  MB085C>CsChrimson 12     3hr/CS+=24 3hr/CS-=24 5min/CS+=24 5min/CS-=24 Pre/CS+=24 Pre/CS-=24
+      same flies across all sessions: True  ({'3hr': 12, '5min': 12, 'Pre': 12})
+  MB085C>W1118     12     3hr/CS+=24 3hr/CS-=24 5min/CS+=24 5min/CS-=24 Pre/CS+=24 Pre/CS-=24
+      same flies across all sessions: True  ({'3hr': 12, '5min': 12, 'Pre': 12})

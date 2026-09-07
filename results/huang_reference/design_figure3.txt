@@ -1,0 +1,42 @@
+
+### PANEL Panel bc  (n=72 files)
+  cell types (1): ['W1118']
+  sessions (3): ['1hr', '5min', 'Pre']
+  CS labels: ['CS+', 'CS-']
+  cell             flies  session x CS counts
+  W1118            12     1hr/CS+=12 1hr/CS-=12 5min/CS+=12 5min/CS-=12 Pre/CS+=12 Pre/CS-=12
+      same flies across all sessions: True  ({'1hr': 12, '5min': 12, 'Pre': 12})
+
+### PANEL Panel e  (n=480 files)
+  cell types (5): ['PPL1-a2', 'PPL1-a3', 'PPL1-a`3', 'PPL1-v1', 'PPL1-v2']
+  sessions (4): ['1hr', '5min', 'Mid', 'Pre']
+  CS labels: ['CS+', 'CS-']
+  cell             flies  session x CS counts
+  PPL1-a2          12     1hr/CS+=12 1hr/CS-=12 5min/CS+=12 5min/CS-=12 Mid/CS+=12 Mid/CS-=12 Pre/CS+=12 Pre/CS-=12
+      same flies across all sessions: True  ({'1hr': 12, '5min': 12, 'Mid': 12, 'Pre': 12})
+  PPL1-a3          12     1hr/CS+=12 1hr/CS-=12 5min/CS+=12 5min/CS-=12 Mid/CS+=12 Mid/CS-=12 Pre/CS+=12 Pre/CS-=12
+      same flies across all sessions: True  ({'1hr': 12, '5min': 12, 'Mid': 12, 'Pre': 12})
+  PPL1-a`3         12     1hr/CS+=12 1hr/CS-=12 5min/CS+=12 5min/CS-=12 Mid/CS+=12 Mid/CS-=12 Pre/CS+=12 Pre/CS-=12
+      same flies across all sessions: True  ({'1hr': 12, '5min': 12, 'Mid': 12, 'Pre': 12})
+  PPL1-v1          12     1hr/CS+=12 1hr/CS-=12 5min/CS+=12 5min/CS-=12 Mid/CS+=12 Mid/CS-=12 Pre/CS+=12 Pre/CS-=12
+      same flies across all sessions: True  ({'1hr': 12, '5min': 12, 'Mid': 12, 'Pre': 12})
+  PPL1-v2          12     1hr/CS+=12 1hr/CS-=12 5min/CS+=12 5min/CS-=12 Mid/CS+=12 Mid/CS-=12 Pre/CS+=12 Pre/CS-=12
+      same flies across all sessions: True  ({'1hr': 12, '5min': 12, 'Mid': 12, 'Pre': 12})
+
+### PANEL Panel f  (n=576 files)
+  cell types (6): ['MBON-a2sc', 'MBON-a3', 'MBON-a`2', 'MBON-a`3', 'MBON-v1', 'MBON-v2']
+  sessions (4): ['1hr', '5min', 'Mid', 'Pre']
+  CS labels: ['CS+', 'CS-']
+  cell             flies  session x CS counts
+  MBON-a2sc        12     1hr/CS+=12 1hr/CS-=12 5min/CS+=12 5min/CS-=12 Mid/CS+=12 Mid/CS-=12 Pre/CS+=12 Pre/CS-=12
+      same flies across all sessions: True  ({'1hr': 12, '5min': 12, 'Mid': 12, 'Pre': 12})
+  MBON-a3          12     1hr/CS+=12 1hr/CS-=12 5min/CS+=12 5min/CS-=12 Mid/CS+=12 Mid/CS-=12 Pre/CS+=12 Pre/CS-=12
+      same flies across all sessions: True  ({'1hr': 12, '5min': 12, 'Mid': 12, 'Pre': 12})
+  MBON-a`2         12     1hr/CS+=12 1hr/CS-=12 5min/CS+=12 5min/CS-=12 Mid/CS+=12 Mid/CS-=12 Pre/CS+=12 Pre/CS-=12
+      same flies across all sessions: True  ({'1hr': 12, '5min': 12, 'Mid': 12, 'Pre': 12})
+  MBON-a`3         12     1hr/CS+=12 1hr/CS-=12 5min/CS+=12 5min/CS-=12 Mid/CS+=12 Mid/CS-=12 Pre/CS+=12 Pre/CS-=12
+      same flies across all sessions: True  ({'1hr': 12, '5min': 12, 'Mid': 12, 'Pre': 12})
+  MBON-v1          12     1hr/CS+=12 1hr/CS-=12 5min/CS+=12 5min/CS-=12 Mid/CS+=12 Mid/CS-=12 Pre/CS+=12 Pre/CS-=12
+      same flies across all sessions: True  ({'1hr': 12, '5min': 12, 'Mid': 12, 'Pre': 12})
+  MBON-v2          12     1hr/CS+=12 1hr/CS-=12 5min/CS+=12 5min/CS-=12 Mid/CS+=12 Mid/CS-=12 Pre/CS+=12 Pre/CS-=12
+      same flies across all sessions: True  ({'1hr': 12, '5min': 12, 'Mid': 12, 'Pre': 12})
