@@ -20,7 +20,7 @@ Drosophila_brain_model/
 # CC BY-NC 4.0 от данных FlyWire как производный материал. Мелкие сводки
 # (rate.csv, rate_std.csv, mn9.json, эталон) в git идут — они сюда не подпадают.
 results/**/*.parquet
-results/*.log
+results/**/*.log
 results/diag/
 
 # Кэш скомпилированных вставок Cython: воспроизводится компилятором.
