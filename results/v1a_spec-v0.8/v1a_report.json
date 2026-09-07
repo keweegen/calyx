@@ -1,0 +1,151 @@
+{
+  "config_sha256": "e65cafa5f7baa56437bcff1790741b41910496e8f6412afebeb012a69d343deb",
+  "spec": "v0.8",
+  "n_run": 10,
+  "t_run_ms": 1000,
+  "quick": false,
+  "substrate": {
+    "n_edges_expected": 555544,
+    "n_edges_got": 555544,
+    "edge_sets_equal": true,
+    "n_weight_mismatch": 0,
+    "n_bad_pre_index": 0,
+    "n_bad_post_index": 0,
+    "pass": true
+  },
+  "conditions": {
+    "uPN_right_20Hz": {
+      "n_compared": 56020,
+      "n_exact": 56020,
+      "fraction_exact": 1.0,
+      "max_spike_count_diff": 0,
+      "pass": true,
+      "wall_s": 51.9
+    },
+    "uPN_right_100Hz": {
+      "n_compared": 56020,
+      "n_exact": 56020,
+      "fraction_exact": 1.0,
+      "max_spike_count_diff": 0,
+      "pass": true,
+      "wall_s": 56.8
+    },
+    "silence_0Hz": {
+      "n_compared": 56020,
+      "n_exact": 56020,
+      "fraction_exact": 1.0,
+      "max_spike_count_diff": 0,
+      "pass": true,
+      "wall_s": 0.8
+    },
+    "odor1_20Hz": {
+      "n_compared": 56020,
+      "n_exact": 56020,
+      "fraction_exact": 1.0,
+      "max_spike_count_diff": 0,
+      "pass": true,
+      "wall_s": 176.9
+    },
+    "odor1_100Hz": {
+      "n_compared": 56020,
+      "n_exact": 56020,
+      "fraction_exact": 1.0,
+      "max_spike_count_diff": 0,
+      "pass": true,
+      "wall_s": 410.8
+    },
+    "odor2_20Hz": {
+      "n_compared": 56020,
+      "n_exact": 56020,
+      "fraction_exact": 1.0,
+      "max_spike_count_diff": 0,
+      "pass": true,
+      "wall_s": 178.9
+    },
+    "odor2_100Hz": {
+      "n_compared": 56020,
+      "n_exact": 56020,
+      "fraction_exact": 1.0,
+      "max_spike_count_diff": 0,
+      "pass": true,
+      "wall_s": 418.6
+    },
+    "odor3_20Hz": {
+      "n_compared": 56020,
+      "n_exact": 56020,
+      "fraction_exact": 1.0,
+      "max_spike_count_diff": 0,
+      "pass": true,
+      "wall_s": 184.0
+    },
+    "odor3_100Hz": {
+      "n_compared": 56020,
+      "n_exact": 56020,
+      "fraction_exact": 1.0,
+      "max_spike_count_diff": 0,
+      "pass": true,
+      "wall_s": 418.0
+    },
+    "odor4_20Hz": {
+      "n_compared": 56020,
+      "n_exact": 56020,
+      "fraction_exact": 1.0,
+      "max_spike_count_diff": 0,
+      "pass": true,
+      "wall_s": 188.6
+    },
+    "odor4_100Hz": {
+      "n_compared": 56020,
+      "n_exact": 56020,
+      "fraction_exact": 1.0,
+      "max_spike_count_diff": 0,
+      "pass": true,
+      "wall_s": 427.7
+    }
+  },
+  "decoder": {
+    "sign_avoid_only": 1.0,
+    "sign_approach_only": -1.0,
+    "index_at_baseline": 0.0,
+    "check1_sign_pass": true,
+    "check2_tolerance": 0.01,
+    "check2_by_freq": {
+      "20Hz": {
+        "calibration": [
+          "odor1_20Hz",
+          "odor2_20Hz",
+          "odor3_20Hz"
+        ],
+        "probe": "odor4_20Hz",
+        "n_types_with_defined_norm": 29,
+        "naive_index": 0.012386562069653285,
+        "calibration_indices": [
+          0.0036935789352581638,
+          -0.0029256983715498807,
+          -0.000888056762544463
+        ],
+        "pass": false
+      },
+      "100Hz": {
+        "calibration": [
+          "odor1_100Hz",
+          "odor2_100Hz",
+          "odor3_100Hz"
+        ],
+        "probe": "odor4_100Hz",
+        "n_types_with_defined_norm": 29,
+        "naive_index": -0.00018154009778607535,
+        "calibration_indices": [
+          0.005206660467508514,
+          -0.006443415827339893,
+          0.001064302151815378
+        ],
+        "pass": true
+      }
+    },
+    "check2_naive_pass": false,
+    "check3_note": "не выполняется: зависит от источника PN-паттернов, отложенного до V1b (спецификация, раздел 3а)",
+    "pass": false
+  },
+  "v1a_pass": false
+}

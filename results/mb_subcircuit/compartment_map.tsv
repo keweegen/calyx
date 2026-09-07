@@ -1,0 +1,64 @@
+hemibrain_type	instance_raw	field_greek	innervates	compartments	note
+MBON01	y5B'2a	γ5β′2a	γ5β′2a	γ5;β′2	
+MBON02	B2B'2a	β2β′2a	β2β′2a	β2;β′2	
+MBON03	B'2mp	β′2mp	β′2mp	β′2	
+MBON04	B'2mp_bilateral	β′2mp_bilateral	β′2mp_bilateral	β′2	
+MBON05	y4>y1y2	γ4>γ1γ2	γ4	γ4	
+MBON06	B1>a	β1>α	β1	β1	
+MBON07	a1	α1	α1	α1	
+MBON09	y3B'1	γ3β′1	γ3β′1	γ3;β′1	
+MBON10	B'1	β′1	β′1	β′1	
+MBON11	y1pedc>a/B	γ1pedc>α/β	γ1pedc	γ1;pedc	
+MBON12	y2a'1	γ2α′1	γ2α′1	γ2;α′1	
+MBON13	a'2	α′2	α′2	α′2	
+MBON14	a3	α3	α3	α3	
+MBON15	a'1	α′1	α′1	α′1	
+MBON15-like	a'1a'2	α′1α′2	α′1α′2	α′1;α′2	
+MBON16	a'3ap	α′3ap	α′3ap	α′3	
+MBON17	a'3m	α′3m	α′3m	α′3	
+MBON17-like	a'2a'3	α′2α′3	α′2α′3	α′2;α′3	
+MBON18	a2sc	α2sc	α2sc	α2	
+MBON19	a2p3p	α2p3p	α2p3p	α2;α3	
+MBON20	y1y2	γ1γ2	γ1γ2	γ1;γ2	
+MBON21	y4y5	γ4γ5	γ4γ5	γ4;γ5	
+MBON22	calyx	calyx	calyx	calyx	
+MBON23	a2sp	α2sp	α2sp	α2	
+MBON24	B2y5	β2γ5	β2γ5	β2;γ5	
+MBON25	y1y2	γ1γ2	γ1γ2	γ1;γ2	
+MBON26	B'2d	β′2d	β′2d	β′2	
+MBON27	y5d	γ5d	γ5d	γ5	
+MBON28	a'3a	α′3a	α′3a	α′3	
+MBON29	y4y5	γ4γ5	γ4γ5	γ4;γ5	
+MBON30	y1y2y3	γ1γ2γ3	γ1γ2γ3	γ1;γ2;γ3	
+MBON31	a'1a	α′1a	α′1a	α′1	
+MBON32	y2	γ2	γ2	γ2	
+MBON33	y2y3	γ2γ3	γ2γ3	γ2;γ3	
+MBON34	y2	γ2	γ2	γ2	
+MBON35	y2	γ2	γ2	γ2	
+PAM01	y5	γ5	γ5	γ5	
+PAM02	B'2a	β′2a	β′2a	β′2	
+PAM03	B2B'2a	β2β′2a	β2β′2a	β2;β′2	
+PAM04	B2	β2	β2	β2	
+PAM05	B'2p	β′2p	β′2p	β′2	
+PAM06	B'2m	β′2m	β′2m	β′2	
+PAM07	y4<y1y2	γ4<γ1γ2	γ4	γ4	
+PAM08	y4	γ4	γ4	γ4	
+PAM09	B1ped	β1ped	β1ped	β1	
+PAM10	B1	β1	β1	β1	
+PAM11	a1	α1	α1	α1	
+PAM12	y3	γ3	γ3	γ3	
+PAM13	B'1ap	β′1ap	β′1ap	β′1	
+PAM14	B'1m	β′1m	β′1m	β′1	
+PAM15	y5B'2a	γ5β′2a	γ5β′2a	γ5;β′2	
+PPL101	y1pedc	γ1pedc	γ1pedc	γ1;pedc	
+PPL102	y1	γ1	γ1	γ1	
+PPL103	y2a'1	γ2α′1	γ2α′1	γ2;α′1	
+PPL104	a'3	α′3	α′3	α′3	
+PPL105	a'2a2	α′2α2	α′2α2	α′2;α2	
+PPL106	a3	α3	α3	α3	
+PPL107	PDL05	PDL05	PDL05		не компартмент (PDL05)
+PPL108	PDL05	PDL05	PDL05		не компартмент (PDL05)
+PPL201					не компартмент (instance без скобок)
+PPL202					не компартмент (instance без скобок)
+PPL203					не компартмент (instance без скобок)
+PPL204	PVL17	PVL17	PVL17		не компартмент (PVL17)

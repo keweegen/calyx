@@ -1,0 +1,73 @@
+{
+  "config_sha256": "e65cafa5f7baa56437bcff1790741b41910496e8f6412afebeb012a69d343deb",
+  "spec": "v0.7",
+  "n_run": 10,
+  "t_run_ms": 1000,
+  "quick": false,
+  "substrate": {
+    "n_edges_expected": 555544,
+    "n_edges_got": 555544,
+    "edge_sets_equal": true,
+    "n_weight_mismatch": 0,
+    "n_bad_pre_index": 0,
+    "n_bad_post_index": 0,
+    "pass": true
+  },
+  "conditions": {
+    "uPN_right_20Hz": {
+      "n_compared": 56020,
+      "n_exact": 56020,
+      "fraction_exact": 1.0,
+      "max_spike_count_diff": 0,
+      "pass": true,
+      "wall_s": 235.6
+    },
+    "uPN_right_100Hz": {
+      "n_compared": 56020,
+      "n_exact": 56020,
+      "fraction_exact": 1.0,
+      "max_spike_count_diff": 0,
+      "pass": true,
+      "wall_s": 635.3
+    },
+    "uPN30_20Hz": {
+      "n_compared": 56020,
+      "n_exact": 56020,
+      "fraction_exact": 1.0,
+      "max_spike_count_diff": 0,
+      "pass": true,
+      "wall_s": 172.2
+    },
+    "uPN30_100Hz": {
+      "n_compared": 56020,
+      "n_exact": 56020,
+      "fraction_exact": 1.0,
+      "max_spike_count_diff": 0,
+      "pass": true,
+      "wall_s": 407.3
+    },
+    "silence_0Hz": {
+      "n_compared": 56020,
+      "n_exact": 56020,
+      "fraction_exact": 1.0,
+      "max_spike_count_diff": 0,
+      "pass": true,
+      "wall_s": 90.0
+    }
+  },
+  "decoder": {
+    "sign_avoid_only": 1.0,
+    "sign_approach_only": -1.0,
+    "index_at_baseline": 0.0,
+    "check1_sign_pass": true,
+    "calibration_condition": "uPN_right_20Hz",
+    "n_types_with_nonzero_norm": 31,
+    "probe_condition": "uPN30_20Hz",
+    "naive_index": -0.06412939510707075,
+    "check2_tolerance": 0.01,
+    "check2_naive_pass": false,
+    "check3_note": "не выполняется: зависит от источника PN-паттернов, отложенного до V1b (спецификация, раздел 3а)",
+    "pass": false
+  },
+  "v1a_pass": false
+}

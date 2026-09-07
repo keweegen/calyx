@@ -1,0 +1,12 @@
+{
+  "n_neurons": 6087,
+  "n_edges": 555544,
+  "n_synapses": 1500246,
+  "n_pn_stimulated": 126,
+  "rate_hz": 100,
+  "t_sim_ms": 1000,
+  "build_s": 0.3,
+  "run_s": 23.79,
+  "n_spikes": 30695,
+  "estimate_180_runs_8proc_min": 8.9
+}

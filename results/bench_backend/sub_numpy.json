@@ -1,0 +1,10 @@
+{
+  "target": "numpy",
+  "scope": "sub",
+  "n_neurons": 6087,
+  "n_edges": 555544,
+  "n_stimulated": 30,
+  "build_s": 0.09,
+  "run_s": 5.97,
+  "n_spikes": 4489
+}

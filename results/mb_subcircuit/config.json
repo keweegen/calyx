@@ -1,0 +1,19 @@
+{
+  "annotations": "flywire_annotations v1.1.0 (df6bb136), Supplemental_file1",
+  "compartments_from": "hemibrain meta Supplemental_file4, поле instance",
+  "core_cell_class": [
+    "Kenyon_Cell",
+    "MBON",
+    "DAN"
+  ],
+  "core_hemibrain_type": [
+    "APL"
+  ],
+  "edges": "all pairs within selection",
+  "input_cell_class": [
+    "ALPN"
+  ],
+  "input_min_connectivity_to_core": 1,
+  "sides": "both",
+  "substrate": "FlyWire v630 (форк [2], 2023_03_23_*_630_final)"
+}

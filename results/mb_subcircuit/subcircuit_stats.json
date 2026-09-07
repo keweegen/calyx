@@ -1,0 +1,91 @@
+{
+  "config_sha256": "e65cafa5f7baa56437bcff1790741b41910496e8f6412afebeb012a69d343deb",
+  "config": {
+    "substrate": "FlyWire v630 (форк [2], 2023_03_23_*_630_final)",
+    "annotations": "flywire_annotations v1.1.0 (df6bb136), Supplemental_file1",
+    "compartments_from": "hemibrain meta Supplemental_file4, поле instance",
+    "core_cell_class": [
+      "Kenyon_Cell",
+      "MBON",
+      "DAN"
+    ],
+    "core_hemibrain_type": [
+      "APL"
+    ],
+    "input_cell_class": [
+      "ALPN"
+    ],
+    "input_min_connectivity_to_core": 1,
+    "sides": "both",
+    "edges": "all pairs within selection"
+  },
+  "n_neurons": 6087,
+  "n_edges": 555544,
+  "n_synapses": 1500246,
+  "by_role": {
+    "Kenyon_Cell": 5177,
+    "PN": 485,
+    "DAN": 326,
+    "MBON": 97,
+    "APL": 2
+  },
+  "by_role_side": {
+    "APL": {
+      "left": 1,
+      "right": 1
+    },
+    "DAN": {
+      "left": 164,
+      "right": 162
+    },
+    "Kenyon_Cell": {
+      "left": 2580,
+      "right": 2597
+    },
+    "MBON": {
+      "left": 49,
+      "right": 48
+    },
+    "PN": {
+      "left": 240,
+      "right": 245
+    }
+  },
+  "n_types": {
+    "APL": 1,
+    "DAN": 25,
+    "Kenyon_Cell": 12,
+    "MBON": 35,
+    "PN": 144
+  },
+  "n_without_hemibrain_type": {
+    "APL": 0,
+    "DAN": 13,
+    "Kenyon_Cell": 0,
+    "MBON": 1,
+    "PN": 29
+  },
+  "n_without_compartment": {
+    "DAN": 21,
+    "MBON": 1
+  },
+  "compartments": [
+    "calyx",
+    "pedc",
+    "α1",
+    "α2",
+    "α3",
+    "α′1",
+    "α′2",
+    "α′3",
+    "β1",
+    "β2",
+    "β′1",
+    "β′2",
+    "γ1",
+    "γ2",
+    "γ3",
+    "γ4",
+    "γ5"
+  ]
+}

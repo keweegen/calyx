@@ -1,0 +1,8 @@
+# Разметка типов клеток FlyWire v630 и метаданные hemibrain.
+# Источник: github.com/flyconnectome/flywire_annotations, тег v1.1.0,
+# коммит df6bb136f5b3d91c3992df4e8de2642329e2a384, каталог supplemental_files/.
+# Файлы не хранятся в репозитории (DATA.md); скачиваются
+# scripts/fetch_flywire_annotations.py и сверяются с этими суммами.
+# формат: имя размер sha256
+Supplemental_file1_annotations.tsv 21714061 55c99c61eecf8db6cc36f1a684b35e4c4208afbab02197d753ccc8dc2a6e2e76
+Supplemental_file4_hemibrain_meta.csv 2397802 133b84ca7857184b0ec74f2d5674b5759323abbb923575f0aa9c8fda3708e341
