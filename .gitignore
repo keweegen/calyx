@@ -31,3 +31,7 @@ results/diag/
 *.part
 .DS_Store
 Thumbs.db
+
+# шарды калибровки V1b - состояние для возобновления прогона; все их точки
+# целиком входят в собранные calibration_stage*.json, которые версионируются
+results/v1b/calibration_stage*.shard*.json

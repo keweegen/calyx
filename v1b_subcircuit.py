@@ -48,6 +48,12 @@ OUT = HERE / "results" / "v1b"
 T_ON_MS, T_PULSE_MS, T_WINDOW_MS = 200, 1000, 4000
 T_RUN_MS = T_ON_MS + T_WINDOW_MS
 
+# Адаптивное усечение: прогон идёт до затухания, а не весь измерительный
+# интервал. QUIET_MS - окно, в котором не должно быть ни одного спайка,
+# чтобы прогон считался завершённым. Счётчики тождественны полному прогону:
+# при нулевом фоне сеть без входа не спайкует.
+SETTLE_MS, QUIET_MS = 300, 200
+
 KC_SPIKE_THRESHOLD = 1      # V1b-2.1: ответ на пробу - хотя бы один спайк
 N_TRIALS = 6                # V1b-2.2: шесть предъявлений
 MIN_TRIALS = 3              # V1b-2.2: ответ не менее чем на половине
@@ -132,7 +138,10 @@ def build(neurons: pd.DataFrame, con: pd.DataFrame, *, pn_kc_scale: float,
         pre_role = e.Presynaptic_ID.map(role).to_numpy()
         post_role = e.Postsynaptic_ID.map(role).to_numpy()
         sel = (pre_role == "PN") & (post_role == "Kenyon_Cell")
-        w = np.where(sel, w * pn_kc_scale, w)
+        # не np.where: он срывает единицы Brian 2 и веса приходят безразмерными
+        mult = np.ones(len(e))
+        mult[sel] = pn_kc_scale
+        w = w * mult
     syn = Synapses(neu, neu, "w : volt", on_pre="g += w",
                    delay=dp["t_dly"], name="core_syn")
     syn.connect(i=e.Presynaptic_ID.map(ci).to_numpy(),
@@ -255,10 +264,21 @@ def run_odor(neurons: pd.DataFrame, con: pd.DataFrame, odor: str, *,
     wins = [(0.0, window_ms / 1000.0)] + [(a / 1000.0, b / 1000.0)
                                           for a, b in extra_windows]
     counts = [np.zeros((len(core_ids), len(seeds)), dtype=np.int32) for _ in wins]
+    truncated_at = []
     for k, sd in enumerate(seeds):
         net.restore("init")
         b2seed(sd)
-        net.run(run_ms * ms)
+        # до конца импульса плюс запас, дальше - пока в последнем окне есть спайки
+        done = min(T_ON_MS + pulse_ms + SETTLE_MS, run_ms)
+        net.run(done * ms)
+        while done < run_ms:
+            prev = int(mon.num_spikes)
+            step = min(QUIET_MS, run_ms - done)
+            net.run(step * ms)
+            done += step
+            if int(mon.num_spikes) == prev:
+                break
+        truncated_at.append(done)
         for idx, ts in mon.spike_trains().items():
             # имя не t: локальная t протекает в пространство имён Brian и
             # конфликтует с его внутренней переменной времени
@@ -268,7 +288,8 @@ def run_odor(neurons: pd.DataFrame, con: pd.DataFrame, odor: str, *,
     return {"core_ids": core_ids, "counts": counts[0],
             "counts_by_window": counts, "windows": wins,
             "stats": st, "odor": odor, "seeds": list(seeds),
-            "pulse_ms": pulse_ms, "window_ms": window_ms}
+            "pulse_ms": pulse_ms, "window_ms": window_ms,
+            "simulated_ms": truncated_at, "full_ms": run_ms}
 
 
 def kc_fraction(res: dict, neurons: pd.DataFrame) -> dict:
@@ -452,6 +473,43 @@ def grid_stage1() -> list[tuple[float, float]]:
     return [(sc, g) for sc in scales for g in gains]
 
 
+def grid_stage2(stage1: list[dict]) -> list[tuple[float, float]]:
+    """Уточняющая сетка (V1b-4.4).
+
+    Ограничивающий прямоугольник допустимых точек стадии 1, расширенный на один
+    шаг стадии 1 в каждую сторону; шаги 2^(1/4) по масштабу и 10^(1/8) по g_apl.
+    Границы задаются правилом, записанным до прогона, поэтому выход за диапазон
+    стадии 1 законен и режимом C не является.
+    """
+    ok = [p for p in stage1 if admissible(p)]
+    if not ok:
+        return []
+    sc = [p["pn_kc_scale"] for p in ok]
+    gs = [p["g_apl_rel"] for p in ok if p["g_apl_rel"] > 0]
+    s_lo, s_hi = min(sc) / 2.0, max(sc) * 2.0          # шаг стадии 1 по масштабу
+    if gs:
+        g_lo, g_hi = min(gs) / (10 ** 0.5), max(gs) * (10 ** 0.5)
+    else:
+        g_lo, g_hi = 0.0, 10 ** -2.0
+
+    out_s, x = [], s_lo
+    while x <= s_hi * 1.0001:
+        out_s.append(x)
+        x *= 2 ** 0.25
+    out_g, y = [], g_lo
+    if g_lo <= 0:
+        out_g.append(0.0)
+        y = 10 ** -2.0
+    while y <= g_hi * 1.0001:
+        out_g.append(y)
+        y *= 10 ** 0.125
+    # ноль торможения остаётся в сетке: он есть в стадии 1 и его исключение
+    # сузило бы пространство после просмотра результата
+    if 0.0 not in out_g and any(p["g_apl_rel"] == 0 for p in ok):
+        out_g.insert(0, 0.0)
+    return [(a, b) for a in out_s for b in out_g]
+
+
 def evaluate_point(neurons, con, odors, *, pn_kc_scale, g_apl_rel, seed_base) -> dict:
     """Величины в точке сетки на заданном наборе запахов."""
     g_abs = g_apl_rel * g_ref_value()
@@ -522,6 +580,10 @@ def main() -> int:
     ap.add_argument("--gapl", type=float, default=1.0, help="g_apl в единицах g_ref")
     ap.add_argument("--no-dan-mask", action="store_true")
     ap.add_argument("--no-graded-apl", action="store_true")
+    ap.add_argument("--codegen", default="numpy", choices=["numpy", "cython"],
+                    help="генератор кода Brian 2; cython требует окружения MSVC")
+    ap.add_argument("--cache", default="",
+                    help="каталог кэша cython (свой на процесс при параллельном запуске)")
     ap.add_argument("--evaluate", action="store_true",
                     help="оценочный набор: все четыре критерия в заданной точке")
     ap.add_argument("--grid", type=int, default=0,
@@ -535,7 +597,9 @@ def main() -> int:
     a = ap.parse_args()
 
     from brian2 import prefs, ms
-    prefs.codegen.target = "numpy"
+    prefs.codegen.target = a.codegen
+    if a.codegen == "cython" and a.cache:
+        prefs.codegen.runtime.cython.cache_dir = a.cache
     from model import default_params as dp
 
     neurons, con = load_substrate()
