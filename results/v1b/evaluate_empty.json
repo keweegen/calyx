@@ -1,0 +1,16 @@
+{
+  "n_spikes_subcircuit": 0,
+  "n_spikes_kc": 0,
+  "spontaneous_rate_hz": 0.0,
+  "f_responding_empty": 0.0,
+  "n_kc": 5177,
+  "seeds": [
+    20261209,
+    20261210,
+    20261211,
+    20261212,
+    20261213,
+    20261214
+  ],
+  "window_ms": 4000
+}

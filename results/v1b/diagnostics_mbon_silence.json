@@ -1,0 +1,187 @@
+{
+  "point": {
+    "pn_kc_scale": 8.0,
+    "g_apl_rel": 3.16228
+  },
+  "odor": "2-heptanone",
+  "n_trials": 2,
+  "seeds": [
+    20261009,
+    20261010
+  ],
+  "timing": "M",
+  "pulse_ms": 5000,
+  "status": "диагностика вне ступени: критерии не вычисляются, параметры не выбираются",
+  "band_scan": [
+    {
+      "pn_kc_scale": 3.3636,
+      "g_apl_rel": 0.74989,
+      "kc_spikes": 8068,
+      "mbon_spikes": 0,
+      "mbon_active_cells": 0,
+      "kc_fraction_any_trial": 0.09001352134440796
+    },
+    {
+      "pn_kc_scale": 4.0,
+      "g_apl_rel": 1.0,
+      "kc_spikes": 7619,
+      "mbon_spikes": 0,
+      "mbon_active_cells": 0,
+      "kc_fraction_any_trial": 0.09464941085570794
+    },
+    {
+      "pn_kc_scale": 4.7568,
+      "g_apl_rel": 1.3335,
+      "kc_spikes": 7180,
+      "mbon_spikes": 0,
+      "mbon_active_cells": 0,
+      "kc_fraction_any_trial": 0.09831949005215376
+    },
+    {
+      "pn_kc_scale": 5.6569,
+      "g_apl_rel": 1.7783,
+      "kc_spikes": 6582,
+      "mbon_spikes": 0,
+      "mbon_active_cells": 0,
+      "kc_fraction_any_trial": 0.10044427274483292
+    },
+    {
+      "pn_kc_scale": 6.7272,
+      "g_apl_rel": 2.3714,
+      "kc_spikes": 6228,
+      "mbon_spikes": 0,
+      "mbon_active_cells": 0,
+      "kc_fraction_any_trial": 0.10546648638207456
+    },
+    {
+      "pn_kc_scale": 8.0,
+      "g_apl_rel": 3.16228,
+      "kc_spikes": 5648,
+      "mbon_spikes": 0,
+      "mbon_active_cells": 0,
+      "kc_fraction_any_trial": 0.11242032064902453
+    }
+  ],
+  "cause_split": {
+    "n_edges_apl_to_mbon": 101,
+    "conditions": {
+      "как есть": {
+        "g_apl_rel": 3.16228,
+        "kc_spikes": 5648,
+        "mbon_spikes": 0,
+        "mbon_active_cells": 0,
+        "mbon_cells_total": 97,
+        "mean_rate_all_mbon_hz": 0.0,
+        "R_t_T38": {
+          "MBON11": 0.0,
+          "MBON12": 0.0,
+          "MBON13": 0.0,
+          "MBON14": 0.0,
+          "MBON17": 0.0,
+          "MBON18": 0.0
+        },
+        "best_type_overall": [
+          "MBON23",
+          0.0
+        ]
+      },
+      "без APL->MBON": {
+        "g_apl_rel": 3.16228,
+        "kc_spikes": 5723,
+        "mbon_spikes": 45,
+        "mbon_active_cells": 22,
+        "mbon_cells_total": 97,
+        "mean_rate_all_mbon_hz": 0.04639175257731959,
+        "R_t_T38": {
+          "MBON11": 0.35,
+          "MBON12": 0.0,
+          "MBON13": 0.0,
+          "MBON14": 0.1,
+          "MBON17": 0.0,
+          "MBON18": 0.2
+        },
+        "best_type_overall": [
+          "MBON05",
+          0.44999999999999996
+        ]
+      },
+      "g_apl = 0": {
+        "g_apl_rel": 0.0,
+        "kc_spikes": 2408863,
+        "mbon_spikes": 91527,
+        "mbon_active_cells": 73,
+        "mbon_cells_total": 97,
+        "mean_rate_all_mbon_hz": 94.35773195876288,
+        "R_t_T38": {
+          "MBON11": 256.25,
+          "MBON12": 138.60000000000002,
+          "MBON13": 90.1,
+          "MBON14": 237.70000000000002,
+          "MBON17": 52.0,
+          "MBON18": 240.75
+        },
+        "best_type_overall": [
+          "MBON05",
+          260.25
+        ]
+      }
+    }
+  },
+  "inhibition_weights": {
+    "Kenyon_Cell": {
+      "n_cells": 5177,
+      "syn_median": 19.0,
+      "syn_max": 68.0,
+      "w_median_mV": 2.360416142857141,
+      "w_max_mV": 8.447805142857137
+    },
+    "MBON": {
+      "n_cells": 88,
+      "syn_median": 11.0,
+      "syn_max": 585.0,
+      "w_median_mV": 1.3665567142857133,
+      "w_max_mV": 72.67597071428565
+    },
+    "DAN": {
+      "n_cells": 289,
+      "syn_median": 3.0,
+      "syn_max": 121.0,
+      "w_median_mV": 0.37269728571428545,
+      "w_max_mV": 15.032123857142848
+    },
+    "PN": {
+      "n_cells": 241,
+      "syn_median": 9.0,
+      "syn_max": 139.0,
+      "w_median_mV": 1.1180918571428562,
+      "w_max_mV": 17.268307571428558
+    }
+  },
+  "edge_counts": {
+    "MBON->APL": {
+      "n_edges": 100,
+      "n_synapses": 2855
+    },
+    "Kenyon_Cell->APL": {
+      "n_edges": 5215,
+      "n_synapses": 116727
+    },
+    "PN->APL": {
+      "n_edges": 275,
+      "n_synapses": 3649
+    },
+    "APL->MBON": {
+      "n_edges": 101,
+      "n_synapses": 3829
+    },
+    "APL->Kenyon_Cell": {
+      "n_edges": 5194,
+      "n_synapses": 98547
+    },
+    "Kenyon_Cell->MBON": {
+      "n_edges": 62177,
+      "n_synapses": 256648
+    },
+    "mbon_share_of_apl_input": 0.023167871720589785
+  }
+}

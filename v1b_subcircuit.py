@@ -320,9 +320,30 @@ REF_PAIRS = [("pentyl acetate", "butyl acetate"),
              ("pentyl acetate", "ethyl lactate"),
              ("butyl acetate", "ethyl lactate")]
 
+# панель ступени P14: 14 одорантов, C и E вместе (спецификация, V1b-4.1)
+PANEL_ALL = PANEL_CAL + PANEL_EVAL
+
 # множество T38: шесть типов MBON, записанных в [38] (спецификация, V1b-3.1)
 T38 = ["MBON11", "MBON12", "MBON13", "MBON14", "MBON17", "MBON18"]
-SEED_CAL, SEED_EVAL = 20260908, 20260908 + 100
+# группа избегания: эталона в [38] нет, пороги не применяются, величины
+# печатаются отчётно (спецификация, V1b-3.1, второе следствие)
+AVOID = ["MBON01", "MBON02", "MBON03", "MBON04", "MBON05", "MBON06"]
+# метка для клеток без hemibrain_type: в подсхеме такой один MBON
+UNTYPED = "<без типа>"
+# Таблица зёрен: своё смещение на каждую пару «набор x тайминг», все различны.
+# Шесть проб на прогон, поэтому шага 50 достаточно, чтобы отрезки не пересеклись.
+# Прогон при g_APL = 0 идёт на зёрнах того прогона, с которым сравнивается
+# (V1b-2.5 - направленная сверка, она обязана быть парной по реализации входа).
+SEED_CAL = 20260908             # P14, калибровка, набор C
+SEED_CAL_M = SEED_CAL + 50      # P14-M, калибровка, набор C (ограничение допустимости)
+SEED_EVAL = SEED_CAL + 100      # P14, оценка, все 14 запахов; и прогон g_APL = 0
+SEED_EVAL_M = SEED_CAL + 200    # P14-M, оценка, все 14 запахов (критерий-вердикт)
+SEED_EMPTY = SEED_CAL + 300     # пустое предъявление (V1b-4.10)
+SEED_PERM = SEED_CAL + 400      # ГСЧ перестановок нуля раздела 3д
+
+# Тайминг M по [38]: предъявление 5 с, средняя частота в окне предъявления
+# (спецификация, V1b-3.1). Набор P14-M - 14 одорантов при этом тайминге.
+M_PULSE_MS = M_WINDOW_MS = 5000
 
 # пороги критериев (спецификация, раздел 3е)
 F_BAND, F_MAX = (0.03, 0.10), 0.10
@@ -404,7 +425,11 @@ def mbon_type_rates(by_odor: dict, neurons: pd.DataFrame,
                     window_ms: float) -> pd.DataFrame:
     """Средняя частота типа MBON по запахам, спайк/с (V1b-3.1)."""
     ids = by_odor[list(by_odor)[0]]["core_ids"]
-    typ = dict(zip(neurons.root_id, neurons.hemibrain_type.astype(str)))
+    # один MBON подсхемы (левый, 720575940623743415) размечен без типа и без
+    # компартмента; он не в T38, эталона у него нет, но и молча пропадать из
+    # таблицы не должен - поэтому получает явную метку
+    typ = dict(zip(neurons.root_id,
+                   neurons.hemibrain_type.astype("string").fillna(UNTYPED)))
     role = dict(zip(neurons.root_id, neurons.mb_role))
     rows = {}
     for o, res in by_odor.items():
@@ -438,6 +463,84 @@ def check_mbon(rates: pd.DataFrame) -> dict:
     return res
 
 
+def md_subset_medians(rates: pd.DataFrame, types: list[str],
+                      k: int = 5) -> dict:
+    """Медиана MD_t по всем k-запаховым подмножествам панели (V1b-3.5, отчёт).
+
+    При панели из 14 запахов и k = 5 подмножеств ровно 2 002 - то число, которое
+    называет спецификация. Величина отчётная: сопоставляется с эталонной 0,27,
+    вердикт не определяет.
+    """
+    from itertools import combinations
+    n = rates.shape[1]
+    idx = list(combinations(range(n), k))
+    per_type = {}
+    for t in types:
+        if t not in rates.index:
+            continue
+        v = rates.loc[t].to_numpy(dtype=float)
+        mds = []
+        for c in idx:
+            sub = v[list(c)]
+            hi, lo = float(sub.max()), float(sub.min())
+            mds.append((hi - lo) / (hi + lo) if (hi + lo) > 0 else float("nan"))
+        good = [m for m in mds if m == m]
+        per_type[t] = float(np.median(good)) if good else float("nan")
+    vals = [x for x in per_type.values() if x == x]
+    return {"n_subsets": len(idx), "k": k, "per_type": per_type,
+            "median_over_types": float(np.median(vals)) if vals else float("nan")}
+
+
+def mbon_type_spikes(by_odor: dict, neurons: pd.DataFrame, mbon_type: str,
+                     window_idx: int = 0) -> dict:
+    """Среднее число спайков клетки типа в заданном окне, по запахам.
+
+    Служит для отчётной величины V1b-3.1: число спайков MBON11 за 1 с импульса
+    рядом со 118 +- 8,3 из [29]. Порога у величины нет.
+    """
+    ids = by_odor[list(by_odor)[0]]["core_ids"]
+    typ = dict(zip(neurons.root_id,
+                   neurons.hemibrain_type.astype("string").fillna(UNTYPED)))
+    role = dict(zip(neurons.root_id, neurons.mb_role))
+    m = np.array([role[i] == "MBON" and typ[i] == mbon_type for i in ids])
+    if not m.any():
+        return {"type": mbon_type, "n_cells": 0, "by_odor": {},
+                "mean_over_odors": float("nan")}
+    per = {}
+    for o, res in by_odor.items():
+        c = res["counts_by_window"][window_idx][m]     # клетки x пробы
+        per[o] = float(c.mean())                       # среднее по клеткам и пробам
+    return {"type": mbon_type, "n_cells": int(m.sum()), "by_odor": per,
+            "mean_over_odors": float(np.mean(list(per.values())))}
+
+
+def mbon_report(by_odor: dict, neurons: pd.DataFrame, window_ms: float) -> dict:
+    """Полный разбор отклика MBON на наборе P14-M (спецификация, V1b-3.1-3.5).
+
+    Блокирующая часть - пороги V1b-3.3-3.5 по множеству T38. Остальное отчётно:
+    группа избегания MBON01-MBON06, для которой эталона в [38] нет, все прочие
+    типы, медианы MD по пятизапаховым подмножествам и число спайков MBON11 за
+    первую секунду предъявления.
+    """
+    rates = mbon_type_rates(by_odor, neurons, window_ms)
+    chk = check_mbon(rates)
+    avoid = {t: {"R_t": float(rates.loc[t].mean()),
+                 "max": float(rates.loc[t].max()),
+                 "min": float(rates.loc[t].min())}
+             for t in AVOID if t in rates.index}
+    other = sorted(set(rates.index) - set(T38) - set(AVOID))
+    return {"n_odors": rates.shape[1], "odors": list(rates.columns),
+            "window_ms": window_ms,
+            "T38": chk,
+            "md_subsets": md_subset_medians(rates, T38),
+            "avoid_group_report_only": avoid,
+            "other_types_report_only": {
+                t: float(rates.loc[t].mean()) for t in other},
+            "rates_table": {t: {o: float(rates.loc[t, o])
+                                for o in rates.columns}
+                            for t in rates.index}}
+
+
 def spikes_per_response(by_odor: dict, neurons: pd.DataFrame,
                         prefix: str, window_idx: int = 1) -> float:
     """Спайков за ответ у подтипа KC в окне эталона (V1b-4.9).
@@ -458,6 +561,154 @@ def spikes_per_response(by_odor: dict, neurons: pd.DataFrame,
             if hit.size:
                 vals.append(float(hit.mean()))
     return float(np.mean(vals)) if vals else float("nan")
+
+
+# --- диагностики оценочного прогона (отчёт, вердикт не определяют) -----------
+def sensitivity_table(by_odor: dict, neurons: pd.DataFrame) -> dict:
+    """V1b-2.4: среднее и максимум f(o) по панели при каждом правиле ответа.
+
+    Пороги k спайков на пробу и правила агрегации заданы спецификацией и
+    подбору не подлежат; таблица делает зависимость вывода от правила видимой.
+    """
+    per = {o: kc_fraction(res, neurons)["sensitivity"]
+           for o, res in by_odor.items()}
+    keys = sorted(next(iter(per.values())))
+    return {k: {"mean": float(np.mean([per[o][k] for o in per])),
+                "max": float(np.max([per[o][k] for o in per]))}
+            for k in keys}
+
+
+def kc_coverage(neurons: pd.DataFrame, con: pd.DataFrame) -> pd.Series:
+    """Доля покрытого маской входа c_i по KC (спецификация, раздел 3д).
+
+    Знаменатель - все синапсы от унигломерулярных PN на клетку, числитель - те
+    из них, что приходят от 24 гломерул маски [39]. Считается по 4 820 KC,
+    имеющим хотя бы один синапс от uPN; воспроизводит записанные в разделе 3д
+    медиану 0,44 и квартили 0,25 и 0,62.
+    """
+    upn = neurons[(neurons.mb_role == "PN")
+                  & (neurons.cell_sub_class == "uniglomerular")]
+    gl_mask = set(pd.read_csv(PANEL, sep="	", index_col=0).columns)
+    in_mask = {int(r.root_id) for r in upn.itertuples() if r.gl in gl_mask}
+    all_upn = {int(x) for x in upn.root_id}
+    kc = {int(x) for x in neurons.loc[neurons.mb_role == "Kenyon_Cell", "root_id"]}
+    e = con[con.Presynaptic_ID.isin(all_upn) & con.Postsynaptic_ID.isin(kc)]
+    tot = e.groupby("Postsynaptic_ID")["Connectivity"].sum()
+    msk = e[e.Presynaptic_ID.isin(in_mask)].groupby(
+        "Postsynaptic_ID")["Connectivity"].sum()
+    return msk.reindex(tot.index).fillna(0) / tot
+
+
+def sparseness_treves_rolls(res: dict, neurons: pd.DataFrame) -> float:
+    """Популяционная разреженность S_P по всем 5 177 KC (V1b-2.5).
+
+    r_i - среднее по 6 пробам число спайков KC i в окне измерения.
+    """
+    role = dict(zip(neurons.root_id, neurons.mb_role))
+    kc = np.array([role[i] == "Kenyon_Cell" for i in res["core_ids"]])
+    r = res["counts"][kc].mean(axis=1)
+    n = len(r)
+    denom = float((r ** 2).sum() / n)
+    if denom == 0:
+        return float("nan")
+    return float((1.0 - (float(r.sum() / n) ** 2) / denom) / (1.0 - 1.0 / n))
+
+
+def kc_fraction_report(res: dict, neurons: pd.DataFrame,
+                       cov: pd.Series) -> dict:
+    """Доля отвечающих при трёх знаменателях (V1b-2.3: 5 177 - критерий, прочие отчётно)."""
+    role = dict(zip(neurons.root_id, neurons.mb_role))
+    side = dict(zip(neurons.root_id, neurons.side))
+    ids = res["core_ids"]
+    kc = np.array([role[i] == "Kenyon_Cell" for i in ids])
+    kc_ids = [i for i, m in zip(ids, kc) if m]
+    resp = (res["counts"][kc] >= KC_SPIKE_THRESHOLD).sum(axis=1) >= MIN_TRIALS
+    with_upn = set(cov.index.astype("int64"))
+    out = {"f_all_5177": float(resp.sum()) / len(kc_ids),
+           "n_denominator_all": len(kc_ids)}
+    sel = np.array([i in with_upn for i in kc_ids])
+    out["f_with_upn_input"] = float(resp[sel].sum()) / int(sel.sum())
+    out["n_denominator_with_upn"] = int(sel.sum())
+    for h in ("right", "left"):
+        m = np.array([side[i] == h for i in kc_ids])
+        out["f_%s" % h] = float(resp[m].sum()) / int(m.sum())
+        out["n_%s" % h] = int(m.sum())
+    return out
+
+
+def coverage_diagnostics(by_odor: dict, neurons: pd.DataFrame,
+                         cov: pd.Series) -> dict:
+    """Отбирает ли непокрытая доля входа отвечающие клетки (раздел 3д).
+
+    Доля отвечающих в разрезе квартилей c_i и ранговая корреляция Спирмена
+    между c_i и числом запахов панели, на которые клетка ответила.
+    """
+    from scipy.stats import spearmanr
+    role = dict(zip(neurons.root_id, neurons.mb_role))
+    ids = by_odor[list(by_odor)[0]]["core_ids"]
+    kc = np.array([role[i] == "Kenyon_Cell" for i in ids])
+    kc_ids = np.array([i for i, m in zip(ids, kc) if m])
+    n_odors_resp = np.zeros(len(kc_ids), dtype=int)
+    for res in by_odor.values():
+        r = (res["counts"][kc] >= KC_SPIKE_THRESHOLD).sum(axis=1) >= MIN_TRIALS
+        n_odors_resp += r.astype(int)
+
+    c = cov.reindex(kc_ids)                     # NaN у 357 KC без входа от uPN
+    have = c.notna().to_numpy()
+    cv, nr = c.to_numpy()[have], n_odors_resp[have]
+    q = np.quantile(cv, [0.25, 0.5, 0.75])
+    bins = np.digitize(cv, q)                   # 0..3
+    by_q = {}
+    for b in range(4):
+        m = bins == b
+        by_q["Q%d" % (b + 1)] = {
+            "n_kc": int(m.sum()),
+            "c_range": [float(cv[m].min()), float(cv[m].max())] if m.any() else None,
+            "mean_odors_responded": float(nr[m].mean()) if m.any() else float("nan"),
+            "frac_responding_any": float((nr[m] > 0).mean()) if m.any() else float("nan")}
+    rho, pval = spearmanr(cv, nr)
+    no_input = int((~have).sum())
+    return {"quartiles_of_c": [float(x) for x in q], "by_quartile": by_q,
+            "spearman_rho": float(rho), "spearman_p": float(pval),
+            "n_kc_with_upn_input": int(have.sum()),
+            "n_kc_without_upn_input": no_input,
+            "mean_odors_responded_without_upn_input":
+                float(n_odors_resp[~have].mean()) if no_input else float("nan")}
+
+
+def empty_presentation(neurons, con, *, pn_kc_scale: float, g_apl_rel: float,
+                       seed_base: int, window_ms: int = T_WINDOW_MS) -> dict:
+    """Пустое предъявление: V1b-4.10, третья величина.
+
+    Тот же стенд, входные частоты нулевые. Печатается спонтанная частота KC и
+    доля KC, которых правило V1b-2.1-2.2 классифицировало бы как отвечающие.
+    До заморозки измерено: 0 спайков во всей подсхеме при pn_kc_scale = 1 и
+    g_apl = 0,03 g_ref.
+    """
+    from brian2 import ms, seed as b2seed
+    role = dict(zip(neurons.root_id, neurons.mb_role))
+    run_ms = T_ON_MS + window_ms
+    net, mon, core_ids, st = build(
+        neurons, con, pn_kc_scale=pn_kc_scale, g_apl=g_apl_rel * g_ref_value(),
+        dan_mask=True, graded_apl=True, rates=None, run_ms=run_ms)
+    net.store("init")
+    kc = np.array([role[i] == "Kenyon_Cell" for i in core_ids])
+    seeds = [seed_base + i for i in range(1, N_TRIALS + 1)]
+    counts = np.zeros((len(core_ids), len(seeds)), dtype=np.int32)
+    for k, sd in enumerate(seeds):
+        net.restore("init")
+        b2seed(sd)
+        net.run(run_ms * ms)
+        for idx, ts in mon.spike_trains().items():
+            spk = np.asarray(ts) - T_ON_MS / 1000.0
+            counts[idx, k] = ((spk >= 0) & (spk < window_ms / 1000.0)).sum()
+    c = counts[kc]
+    resp = (c >= KC_SPIKE_THRESHOLD).sum(axis=1) >= MIN_TRIALS
+    return {"n_spikes_subcircuit": int(counts.sum()),
+            "n_spikes_kc": int(c.sum()),
+            "spontaneous_rate_hz": float(c.mean() / (window_ms / 1000.0)),
+            "f_responding_empty": float(resp.sum()) / int(kc.sum()),
+            "n_kc": int(kc.sum()), "seeds": seeds, "window_ms": window_ms}
 
 
 # --- сетка калибровки (спецификация, V1b-4.4-4.6) -----------------------------
@@ -548,6 +799,88 @@ def choose_point(points: list[dict]) -> dict | None:
     return min(pool, key=key)
 
 
+# --- оценочные прогоны в выбранной точке (V1b-4.2, V1b-4.7) ------------------
+def eval_p14(neurons, con, *, pn_kc_scale: float, g_apl_rel: float,
+             seed_base: int = SEED_EVAL, odors: list | None = None) -> dict:
+    """Прогон P14: 14 запахов, импульс 1 с, окно 4 с.
+
+    Даёт критерий доли отвечающих KC и критерий перекрытия (оба гейтуются по E,
+    V1b-4.2), плюс отчётные величины V1b-2.3, V1b-2.4, V1b-2.5, V1b-4.9, V1b-4.10
+    и диагностики покрытия раздела 3д.
+    """
+    g_abs = g_apl_rel * g_ref_value()
+    odors = list(odors or PANEL_ALL)
+    by = run_panel(neurons, con, odors, pn_kc_scale=pn_kc_scale,
+                   g_apl=g_abs, seed_base=seed_base, extra_windows=((0, 2000),))
+    # Критерии гейтуются по E. Когда набор E в прогон не входит целиком - при
+    # проверке кода или при ограничении допустимости на C - критерии не
+    # вычисляются: слепота E обязана дожить до оценочного прогона (V1b-4.7).
+    on_e = [o for o in PANEL_EVAL if o in odors]
+    by_e = {o: by[o] for o in on_e}
+    cov = kc_coverage(neurons, con)
+
+    f_all = {o: kc_fraction(by[o], neurons)["f"] for o in odors}
+    if len(on_e) == len(PANEL_EVAL):
+        # полосы те же, что в V1b-4.5; перекрытие - по 28 парам внутри E
+        f_e = [f_all[o] for o in PANEL_EVAL]
+        kc_crit = {"f_mean_E": float(np.mean(f_e)), "f_max_E": float(np.max(f_e)),
+                   "band": list(F_BAND), "ceiling": F_MAX,
+                   "pass": bool(F_BAND[0] <= np.mean(f_e) <= F_BAND[1]
+                                and max(f_e) <= F_MAX)}
+        ov = check_overlap(overlap_pearson(by_e, neurons))
+    else:
+        kc_crit = ov = {"not_computed": "набор E в прогон не входит целиком"}
+    r_all = overlap_pearson(by, neurons)
+    ov_all = check_overlap(r_all) if len(odors) >= 3 else {}
+
+    return {"point": {"pn_kc_scale": pn_kc_scale, "g_apl_rel": g_apl_rel},
+            "seed_base": seed_base, "timing": "P14",
+            "pulse_ms": T_PULSE_MS, "window_ms": T_WINDOW_MS,
+            "kc_fraction_by_odor": f_all,
+            "kc_fraction_criterion_E": kc_crit,
+            "odors": odors,
+            "kc_fraction_report": {o: kc_fraction_report(by[o], neurons, cov)
+                                   for o in odors},
+            "overlap_criterion_E_28_pairs": ov,
+            "overlap_report_all_pairs": {
+                "n_pairs": len(r_all), "check_on_all": ov_all,
+                "r": {"%s | %s" % k: v for k, v in r_all.items()}},
+            "sensitivity_V1b_2_4": sensitivity_table(by, neurons),
+            "sparseness_V1b_2_5": {o: sparseness_treves_rolls(by[o], neurons)
+                                   for o in odors},
+            "spikes_per_response_V1b_4_9_4_10": {
+                "s_ab": spikes_per_response(by, neurons, "KCab"),
+                "s_apbp": spikes_per_response(by, neurons, "KCa'b'"),
+                "s_g": spikes_per_response(by, neurons, "KCg"),
+                "target_ab": SPIKES_AB_TARGET},
+            "coverage_diagnostics": coverage_diagnostics(by, neurons, cov)}
+
+
+def eval_p14m(neurons, con, *, pn_kc_scale: float, g_apl_rel: float,
+              seed_base: int = SEED_EVAL_M,
+              odors: list | None = None) -> dict:
+    """Прогон P14-M: 14 запахов, предъявление 5 с, окно предъявления.
+
+    Набор, на котором определён критерий отклика MBON (V1b-3.1). Дополнительное
+    окно [0; 1 с] нужно для отчётного числа спайков MBON11 рядом со 118 +- 8,3
+    из [29]: стимул до конца первой секунды у импульсов 1 с и 5 с одинаков.
+    """
+    g_abs = g_apl_rel * g_ref_value()
+    odors = list(odors or PANEL_ALL)
+    by = run_panel(neurons, con, odors, pn_kc_scale=pn_kc_scale,
+                   g_apl=g_abs, seed_base=seed_base,
+                   pulse_ms=M_PULSE_MS, window_ms=M_WINDOW_MS,
+                   extra_windows=((0, 1000),))
+    rep = mbon_report(by, neurons, M_WINDOW_MS)
+    rep.update({"point": {"pn_kc_scale": pn_kc_scale, "g_apl_rel": g_apl_rel},
+                "seed_base": seed_base, "timing": "P14-M",
+                "pulse_ms": M_PULSE_MS,
+                "MBON11_spikes_first_second": mbon_type_spikes(
+                    by, neurons, "MBON11", window_idx=1),
+                "MBON11_reference_29": "118 +- 8,3 спайка за 1 с импульса"})
+    return rep
+
+
 # --- регрессионный контроль (спецификация, v0.11, критерий (а) и (б)) ---------
 def regression_substrate(neurons: pd.DataFrame, con: pd.DataFrame) -> dict:
     """При выключенных подменах субстрат обязан совпасть с V1a побитово."""
@@ -585,7 +918,16 @@ def main() -> int:
     ap.add_argument("--cache", default="",
                     help="каталог кэша cython (свой на процесс при параллельном запуске)")
     ap.add_argument("--evaluate", action="store_true",
-                    help="оценочный набор: все четыре критерия в заданной точке")
+                    help="прогон P14 в точке: доля KC, перекрытие и диагностики")
+    ap.add_argument("--evaluate-mbon", action="store_true",
+                    help="прогон P14-M в точке: критерий отклика MBON (V1b-3.1)")
+    ap.add_argument("--empty", action="store_true",
+                    help="пустое предъявление: спонтанная частота (V1b-4.10)")
+    ap.add_argument("--apl0", action="store_true",
+                    help="прогон P14 при g_APL = 0 на зёрнах оценки (V1b-2.5)")
+    ap.add_argument("--panel", default="all", choices=["all", "cal", "eval"],
+                    help="набор запахов прогона; cal - проверка кода "
+                         "без расходования слепоты набора E")
     ap.add_argument("--grid", type=int, default=0,
                     help="калибровка: сколько точек стадии 1 прогнать (0 - не запускать)")
     ap.add_argument("--regression", action="store_true",
@@ -632,28 +974,103 @@ def main() -> int:
         print("v1a_subcircuit.py против замороженных артефактов results/v1a/runs.")
         return 0 if (r["mask_count_ok"] and h_off == h_on) else 1
 
-    if a.evaluate:
-        pt = evaluate_point(neurons, con, PANEL_EVAL, pn_kc_scale=a.scale,
-                            g_apl_rel=a.gapl, seed_base=SEED_EVAL)
-        by = pt.pop("_by_odor")
-        r = overlap_pearson(by, neurons)
-        ov = check_overlap(r)
-        print("оценочный набор, %d запахов, pn_kc_scale %.4g, g_apl %.4g g_ref"
-              % (len(PANEL_EVAL), a.scale, a.gapl))
-        print("доля отвечающих KC: среднее %.4f, максимум %.4f  (полоса %s, потолок %.2f)"
-              % (pt["f_mean"], pt["f_max"], F_BAND, F_MAX))
-        print("перекрытие: r(PA,BA) %.3f, r(PA,EL) %.3f, r(BA,EL) %.3f"
-              % (ov["r_PA_BA"], ov["r_PA_EL"], ov["r_BA_EL"]))
-        print("   порядок %s, разделение %.3f (>= %.2f) %s, потолок %s"
-              % (ov["order_ok"], ov["separation"], OVERLAP_SEP_MIN,
-                 ov["separation_ok"], ov["ceiling_ok"]))
-        print("спайков за ответ: KCab %.2f (эталон %.1f), KCa'b' %.2f, KCg %.2f"
-              % (pt["s_ab"], SPIKES_AB_TARGET, pt["s_apbp"], pt["s_g"]))
+    panel = {"all": PANEL_ALL, "cal": PANEL_CAL, "eval": PANEL_EVAL}[a.panel]
+    # на калибровочном наборе идут только проверки кода, поэтому и зёрна
+    # калибровочные: оценочные зёрна расходуются один раз, в прогоне ступени
+    seed_p14 = SEED_CAL if a.panel == "cal" else SEED_EVAL
+    seed_p14m = SEED_CAL_M if a.panel == "cal" else SEED_EVAL_M
+
+    def save(name: str, obj: dict) -> None:
         OUT.mkdir(parents=True, exist_ok=True)
-        (OUT / "evaluate.json").write_text(
-            json.dumps({**pt, "overlap": {str(k): v for k, v in r.items()},
-                        "overlap_check": ov}, ensure_ascii=False, indent=2),
-            encoding="utf-8")
+        (OUT / name).write_text(json.dumps(obj, ensure_ascii=False, indent=2),
+                                encoding="utf-8")
+        print("записано: %s" % (OUT / name))
+
+    if a.evaluate:
+        res = eval_p14(neurons, con, pn_kc_scale=a.scale, g_apl_rel=a.gapl,
+                       seed_base=seed_p14, odors=panel)
+        kc, ov = res["kc_fraction_criterion_E"], res["overlap_criterion_E_28_pairs"]
+        if "not_computed" in kc:
+            print("набор %s: критерии по E не вычисляются (%s)"
+                  % (a.panel, kc["not_computed"]))
+            save("evaluate_p14_%s.json" % a.panel, res)
+            return 0
+        print("прогон P14, 14 запахов, pn_kc_scale %.4g, g_apl %.4g g_ref, зёрна %d"
+              % (a.scale, a.gapl, res["seed_base"]))
+        print("доля отвечающих KC на E: среднее %.4f, максимум %.4f "
+              "(полоса %s, потолок %.2f) -> %s"
+              % (kc["f_mean_E"], kc["f_max_E"], F_BAND, F_MAX,
+                 "выполнен" if kc["pass"] else "НЕ ВЫПОЛНЕН"))
+        print("перекрытие по E: r(PA,BA) %.3f, r(PA,EL) %.3f, r(BA,EL) %.3f"
+              % (ov["r_PA_BA"], ov["r_PA_EL"], ov["r_BA_EL"]))
+        print("   порядок %s, разделение %.3f (>= %.2f) %s, потолок %s -> %s"
+              % (ov["order_ok"], ov["separation"], OVERLAP_SEP_MIN,
+                 ov["separation_ok"], ov["ceiling_ok"],
+                 "выполнен" if ov["pass"] else "НЕ ВЫПОЛНЕН"))
+        sp = res["spikes_per_response_V1b_4_9_4_10"]
+        print("спайков за ответ: KCab %.2f (эталон %.1f), KCa'b' %.2f, KCg %.2f"
+              % (sp["s_ab"], SPIKES_AB_TARGET, sp["s_apbp"], sp["s_g"]))
+        cd = res["coverage_diagnostics"]
+        print("Спирмен(c_i, число запахов ответа) rho %.3f, p %.3g"
+              % (cd["spearman_rho"], cd["spearman_p"]))
+        save("evaluate_p14.json", res)
+        return 0
+
+    if a.evaluate_mbon:
+        res = eval_p14m(neurons, con, pn_kc_scale=a.scale, g_apl_rel=a.gapl,
+                        seed_base=seed_p14m, odors=panel)
+        t = res["T38"]
+        print("прогон P14-M, 14 запахов, предъявление %d мс, pn_kc_scale %.4g, "
+              "g_apl %.4g g_ref, зёрна %d"
+              % (M_PULSE_MS, a.scale, a.gapl, res["seed_base"]))
+        if t["missing"]:
+            print("типов T38 нет в подсхеме: %s" % ", ".join(t["missing"]))
+        print("%-8s %10s %10s %10s %8s" % ("тип", "R_t, Гц", "max", "min", "MD"))
+        for name in T38:
+            d = t["per_type"].get(name)
+            if d is None:
+                continue
+            print("%-8s %10.3f %10.3f %10.3f %8.3f"
+                  % (name, d["R_t"], d["max"], d["min"], d["MD"]))
+        print("пол >= %.1f Гц у всех шести: %s" % (MBON_FLOOR_HZ, t["floor_ok"]))
+        print("потолок <= %.0f Гц у всех шести: %s" % (MBON_CEIL_HZ, t["ceiling_ok"]))
+        print("MD >= %.2f у %d типов (нужно %d): %s"
+              % (MBON_MD_MIN, t["n_md_ok"], MBON_MD_TYPES, t["md_ok"]))
+        print("критерий V1b-3.1: %s" % ("выполнен" if t["pass"] else "НЕ ВЫПОЛНЕН"))
+        md = res["md_subsets"]
+        print("медиана MD по %d пятизапаховым подмножествам: %.3f (эталон 0,27)"
+              % (md["n_subsets"], md["median_over_types"]))
+        p11 = res["MBON11_spikes_first_second"]
+        print("MBON11 за первую секунду: среднее по 14 запахам %.2f спайка "
+              "на клетку (эталон [29] 118 +- 8,3; стимулы разные)"
+              % p11["mean_over_odors"])
+        save("evaluate_p14m_%s.json" % a.panel, res)
+        return 0
+
+    if a.empty:
+        res = empty_presentation(neurons, con, pn_kc_scale=a.scale,
+                                 g_apl_rel=a.gapl, seed_base=SEED_EMPTY)
+        print("пустое предъявление, pn_kc_scale %.4g, g_apl %.4g g_ref, зёрна %s"
+              % (a.scale, a.gapl, res["seeds"]))
+        print("спайков во всей подсхеме %d, из них KC %d"
+              % (res["n_spikes_subcircuit"], res["n_spikes_kc"]))
+        print("спонтанная частота KC %.4f Гц (эталон [46] 0,1 +- 0,4)"
+              % res["spontaneous_rate_hz"])
+        print("доля KC, которых правило V1b-2.1-2.2 сочло бы отвечающими: %.4f"
+              % res["f_responding_empty"])
+        save("evaluate_empty.json", res)
+        return 0
+
+    if a.apl0:
+        # V1b-2.5: сверка парная по реализации входа, поэтому зёрна оценочные
+        res = eval_p14(neurons, con, pn_kc_scale=a.scale, g_apl_rel=0.0,
+                       seed_base=seed_p14, odors=panel)
+        print("прогон P14 при g_APL = 0, pn_kc_scale %.4g, зёрна %d"
+              % (a.scale, res["seed_base"]))
+        for o in panel:
+            print("   %-28s S_P %.4f, доля отвечающих %.4f"
+                  % (o, res["sparseness_V1b_2_5"][o], res["kc_fraction_by_odor"][o]))
+        save("evaluate_apl0_%s.json" % a.panel, res)
         return 0
 
     if a.grid:
