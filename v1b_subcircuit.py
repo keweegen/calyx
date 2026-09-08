@@ -732,7 +732,13 @@ def grid_stage2(stage1: list[dict]) -> list[tuple[float, float]]:
     Границы задаются правилом, записанным до прогона, поэтому выход за диапазон
     стадии 1 законен и режимом C не является.
     """
-    ok = [p for p in stage1 if admissible(p)]
+    # V1b-4.4 говорит «допустимых точек стадии 1», а V1b-4.5 определяет
+    # допустимость как конъюнкцию доли и MBON. Прямоугольник строится по
+    # ограничению ПО ДОЛЕ: иначе при пустом MBON-ограничении стадии 2 не
+    # существует вовсе, и правило остановки «исчерпание сетки» подменяется
+    # остановкой на грубой сетке. Прочтение объявлено до прогона; при пустой
+    # области исход всё равно FAIL-CAL-MBON, но карта считается на тонкой сетке.
+    ok = [p for p in stage1 if passes_fraction(p)]
     if not ok:
         return []
     sc = [p["pn_kc_scale"] for p in ok]
@@ -777,14 +783,91 @@ def evaluate_point(neurons, con, odors, *, pn_kc_scale, g_apl_rel, seed_base) ->
             "_by_odor": by}
 
 
-def admissible(pt: dict) -> bool:
-    """V1b-4.5: точка допустима по доле отвечающих на калибровочном наборе."""
+def passes_fraction(pt: dict) -> bool:
+    """Первая половина V1b-4.5: ограничение по доле отвечающих KC на C.
+
+    Отдельная функция, потому что допустимость - конъюнкция, и ограничение
+    MBON считается только для точек, прошедших это: прогон MBON на C стоит
+    вчетверо дороже прогона доли, а недопустимая по доле точка допустимой
+    стать не может.
+    """
     return (F_BAND[0] <= pt["f_mean"] <= F_BAND[1]) and pt["f_max"] <= F_MAX
 
 
+def passes_mbon(pt: dict) -> bool | None:
+    """Вторая половина V1b-4.5: V1b-3.3, V1b-3.4 и V1b-3.5 по запахам C.
+
+    Возвращает None, если ограничение в точке не вычислялось: это не «прошла»
+    и не «не прошла», а «неизвестно», и допустимой такая точка не считается.
+    Разделение существенно - именно смешение «не вычислено» с «прошла» сделало
+    калибровку V1b не соответствующей спецификации.
+    """
+    m = pt.get("mbon")
+    if m is None:
+        return None
+    return bool(m.get("floor_ok") and m.get("ceiling_ok") and m.get("md_ok"))
+
+
+def admissible(pt: dict) -> bool:
+    """V1b-4.5: допустимость есть конъюнкция ограничения по доле и MBON на C."""
+    if not passes_fraction(pt):
+        return False
+    return passes_mbon(pt) is True
+
+
+def chebyshev_margins(points: list[dict]) -> dict:
+    """Расстояние в шагах сетки до ближайшей недопустимой точки или края.
+
+    Тай-брейк (2) правила V1b-4.6. Метрика Чебышёва на индексах узлов сетки,
+    построенной по самим точкам: край сетки считается недопустимым соседом,
+    поэтому точка в углу получает расстояние 1, а не бесконечность.
+    """
+    key = lambda p: (round(p["pn_kc_scale"], 10), round(p["g_apl_rel"], 10))
+    sx = sorted({key(p)[0] for p in points})
+    gy = sorted({key(p)[1] for p in points})
+    si = {v: i for i, v in enumerate(sx)}
+    gi = {v: i for i, v in enumerate(gy)}
+    ok_cells = {(si[key(p)[0]], gi[key(p)[1]]) for p in points if admissible(p)}
+    out = {}
+    for p in points:
+        a, b = key(p)
+        i, j = si[a], gi[b]
+        d = 1
+        while True:
+            # кольцо Чебышёва радиуса d: если в нём есть недопустимый узел или
+            # выход за сетку, расстояние равно d
+            hit = False
+            for di in range(-d, d + 1):
+                for dj in range(-d, d + 1):
+                    if max(abs(di), abs(dj)) != d:
+                        continue
+                    ci, cj = i + di, j + dj
+                    if not (0 <= ci < len(sx) and 0 <= cj < len(gy)):
+                        hit = True
+                    elif (ci, cj) not in ok_cells:
+                        hit = True
+                    if hit:
+                        break
+                if hit:
+                    break
+            if hit or d > max(len(sx), len(gy)):
+                out[(a, b)] = d
+                break
+            d += 1
+    return out
+
+
 def choose_point(points: list[dict]) -> dict | None:
-    """V1b-4.6: лексикографический выбор среди допустимых точек."""
-    ok = [p for p in points if admissible(p)]
+    """V1b-4.6: лексикографический выбор среди допустимых точек стадии 2.
+
+    Выбор идёт по стадии 2, а не по объединению стадий: в V1b объединение дало
+    ту же точку, но правило говорит о стадии 2, и совпадение исходов оправданием
+    расхождения не является. Точки без метки стадии считаются принадлежащими
+    рассматриваемой сетке - так вызывают тесты и разбор одной стадии.
+    """
+    stage2 = [p for p in points if p.get("stage") == 2]
+    pool_all = stage2 if stage2 else points
+    ok = [p for p in pool_all if admissible(p)]
     if not ok:
         return None
     band = [p for p in ok if 0.045 <= p["f_mean"] <= 0.055]
@@ -792,10 +875,20 @@ def choose_point(points: list[dict]) -> dict | None:
         return min(ok, key=lambda p: abs(p["f_mean"] - 0.05))
     defined = [p for p in band if p["s_ab"] == p["s_ab"]]
     pool = defined or band
-    best = min(p["s_ab"] - SPIKES_AB_TARGET if p["s_ab"] == p["s_ab"] else float("inf")
-               for p in pool)
+
+    # тай-брейк (2) считается по всей сетке, а не по полосе: расстояние меряется
+    # до недопустимых узлов, а они в полосу по определению не входят
+    margin = {p.get("chebyshev_to_edge") for p in pool}
+    if None in margin:
+        m = chebyshev_margins(pool_all)
+        get_margin = lambda p: m[(round(p["pn_kc_scale"], 10),
+                                  round(p["g_apl_rel"], 10))]
+    else:
+        get_margin = lambda p: p["chebyshev_to_edge"]
+
     key = lambda p: (abs(p["s_ab"] - SPIKES_AB_TARGET) if p["s_ab"] == p["s_ab"]
-                     else float("inf"), p["g_apl_rel"], p["pn_kc_scale"])
+                     else float("inf"),
+                     -get_margin(p), p["g_apl_rel"], p["pn_kc_scale"])
     return min(pool, key=key)
 
 
@@ -1074,8 +1167,13 @@ def main() -> int:
         return 0
 
     if a.grid:
+        # Отсев по доле, не калибровка. Ограничение MBON здесь не считается,
+        # поэтому допустимость по V1b-4.5 не определена и точка не выбирается.
+        # Калибровка ступени идёт только через run_v1b_grid.py: она шардится,
+        # считает обе половины V1b-4.5 и пишет артефакт стадии.
         pts = grid_stage1()[:a.grid]
-        print("стадия 1: %d точек из %d" % (len(pts), len(grid_stage1())))
+        print("отсев по доле на сетке стадии 1: %d точек из %d (не калибровка)"
+              % (len(pts), len(grid_stage1())))
         done = []
         for k, (sc, g) in enumerate(pts, 1):
             pt = evaluate_point(neurons, con, PANEL_CAL, pn_kc_scale=sc,
@@ -1084,15 +1182,15 @@ def main() -> int:
             done.append(pt)
             print("  [%d/%d] scale %.4g, g %.4g -> f̄ %.4f, f_max %.4f, s_ab %.2f%s"
                   % (k, len(pts), sc, g, pt["f_mean"], pt["f_max"], pt["s_ab"],
-                     "  ДОПУСТИМА" if admissible(pt) else ""))
+                     "  прошла по доле" if passes_fraction(pt) else ""))
         OUT.mkdir(parents=True, exist_ok=True)
-        (OUT / "calibration_stage1.json").write_text(
+        # отдельное имя: артефакт калибровки этой веткой не перезаписывается
+        (OUT / "fraction_screen_stage1.json").write_text(
             json.dumps(done, ensure_ascii=False, indent=2), encoding="utf-8")
-        best = choose_point(done)
         print()
-        print("выбрана: %s" % ({k: best[k] for k in ("pn_kc_scale", "g_apl_rel",
-                                                     "f_mean", "s_ab")}
-                               if best else "нет допустимых точек (исход FAIL-CAL)"))
+        print("прошли по доле: %d из %d. Допустимость по V1b-4.5 не определена:"
+              % (sum(1 for p in done if passes_fraction(p)), len(done)))
+        print("ограничение MBON на C не вычислялось. Выбор точки — run_v1b_grid.py.")
         return 0
 
     if a.trials:

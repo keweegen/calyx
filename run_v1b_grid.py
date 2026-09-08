@@ -79,13 +79,37 @@ def run_shard(a) -> int:
         pt = V.evaluate_point(neurons, con, V.PANEL_CAL, pn_kc_scale=sc,
                               g_apl_rel=g, seed_base=V.SEED_CAL)
         pt.pop("_by_odor")
+        pt["stage"] = a.stage
+        # Допустимость - конъюнкция (V1b-4.5), поэтому ограничение MBON на C
+        # считается только для точек, прошедших по доле: прогон при тайминге
+        # P14-M вчетверо дороже прогона доли, а недопустимая по доле точка
+        # допустимой стать не может. Ключа mbon у непрошедших точек нет, и это
+        # означает «не вычислялось», а не «прошло».
+        if V.passes_fraction(pt):
+            m = V.eval_p14m(neurons, con, pn_kc_scale=sc, g_apl_rel=g,
+                            seed_base=V.SEED_CAL_M, odors=V.PANEL_CAL)
+            t = m["T38"]
+            pt["mbon"] = {"floor_ok": t["floor_ok"], "ceiling_ok": t["ceiling_ok"],
+                          "md_ok": t["md_ok"], "n_md_ok": t["n_md_ok"],
+                          "pass": t["pass"], "per_type": t["per_type"],
+                          "missing": t["missing"]}
         pt["wall_s"] = round(time.time() - t0, 1)
         done.append(pt)
         path.write_text(json.dumps(done, ensure_ascii=False, indent=2),
                         encoding="utf-8")
+        if "mbon" not in pt:
+            tail = ""
+        elif V.admissible(pt):
+            tail = "  ДОПУСТИМА"
+        else:
+            t = pt["mbon"]
+            broke = [n for n, v in (("V1b-3.3", t["floor_ok"]),
+                                    ("V1b-3.4", t["ceiling_ok"]),
+                                    ("V1b-3.5", t["md_ok"])) if not v]
+            tail = "  по доле прошла, MBON нет: " + ", ".join(broke)
         print("  [%d/%d] scale %.4g g %.4g -> f %.4f, f_max %.4f, s_ab %.2f, %.0f c%s"
               % (k, len(todo), sc, g, pt["f_mean"], pt["f_max"], pt["s_ab"],
-                 pt["wall_s"], "  ДОПУСТИМА" if V.admissible(pt) else ""), flush=True)
+                 pt["wall_s"], tail), flush=True)
     print("шард %d готов" % a.shard, flush=True)
     return 0
 
@@ -111,18 +135,40 @@ def merge(a) -> int:
     merged_path(a.stage).write_text(
         json.dumps(pts, ensure_ascii=False, indent=2), encoding="utf-8")
     grid = _grid_for(V, a.stage)
+    n_frac = sum(1 for p in pts if V.passes_fraction(p))
     n_ok = sum(1 for p in pts if V.admissible(p))
-    print("собрано точек: %d из %d, допустимых %d" % (len(pts), len(grid), n_ok))
+    n_unknown = sum(1 for p in pts
+                    if V.passes_fraction(p) and V.passes_mbon(p) is None)
+    print("собрано точек: %d из %d" % (len(pts), len(grid)))
+    print("   прошли по доле: %d; из них допустимы по V1b-4.5: %d" % (n_frac, n_ok))
     if len(pts) < len(grid):
         print("сетка не полна — выбор точки преждевременен")
         return 0
-    pool = pts
-    if a.stage == 2:
-        # выбор идёт по объединению грубой и уточняющей сеток (V1b-4.6)
-        pool = json.loads(merged_path(1).read_text(encoding="utf-8")) + pts
-    best = V.choose_point(pool)
+    if n_unknown:
+        # «не вычислено» - не «не прошло». Объявлять исход по невычисленному
+        # ограничению значит повторить ту самую ошибку, из-за которой V1b
+        # закрыта: сначала досчитать, потом выносить исход.
+        print("   у %d точек ограничение MBON не вычислялось: исход не выносится,"
+              % n_unknown)
+        print("   сетку нужно дожать прогоном с ограничением V1b-4.5")
+        return 1
+    # V1b-4.6: выбор среди допустимых точек стадии 2, не по объединению стадий
+    best = V.choose_point([p for p in pts if p.get("stage", a.stage) == a.stage])
     if best is None:
-        print("допустимых точек нет — исход FAIL-CAL (спецификация, V1b-4.8)")
+        if n_frac == 0:
+            print("ни одна точка не прошла по доле — исход FAIL-CAL-KC")
+        else:
+            print("по доле прошли %d точек, по V1b-4.5 не прошла ни одна — "
+                  "исход FAIL-CAL-MBON" % n_frac)
+            worst = [(min((d["R_t"] for d in p["mbon"]["per_type"].values()),
+                          default=float("nan")), p)
+                     for p in pts if "mbon" in p]
+            worst = [w for w in worst if w[0] == w[0]]
+            if worst:
+                lo, p = max(worst, key=lambda w: w[0])
+                print("   лучшее, что даёт семейство на полу: min по типам R_t = "
+                      "%.4f Гц (порог %.1f) в точке scale %.4g, g %.5g"
+                      % (lo, V.MBON_FLOOR_HZ, p["pn_kc_scale"], p["g_apl_rel"]))
     else:
         print("выбрана: pn_kc_scale %.5g, g_apl %.5g g_ref, f %.4f, s_ab %.2f"
               % (best["pn_kc_scale"], best["g_apl_rel"], best["f_mean"], best["s_ab"]))
