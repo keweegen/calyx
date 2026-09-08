@@ -39,7 +39,10 @@ import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-OUT = HERE / "results" / "v1b"
+# Ступень V1b′ (спецификация v0.15, раздел 3ж). Артефакты пишутся в свой
+# каталог; каталог закрытой ступени V1b служит только базой сравнения.
+OUT = HERE / "results" / "v1b_prime"
+PILOT = HERE / "results" / "v1b"
 def merged_path(stage: int) -> Path:
     return OUT / ("calibration_stage%d.json" % stage)
 
@@ -175,6 +178,50 @@ def merge(a) -> int:
     return 0
 
 
+def check_preconditions() -> int:
+    """Предусловия прогона ступени: V1b'-0 и V1b'-1а.
+
+    V1b'-0: тест соответствия кода спецификации проходит целиком. Провал -
+    ошибка исполнения, ступень не начинается.
+    V1b'-1а: карта доли отвечающих на узлах, уже посчитанных пилотом, совпадает
+    с ней побитово. Зёрна калибровки те же, поэтому расхождение означает
+    недетерминизм и разбирается до калибровки.
+    """
+    import subprocess
+    r = subprocess.run([sys.executable, str(HERE / "test_spec_conformance.py")],
+                       capture_output=True, text=True, encoding="utf-8",
+                       errors="replace")
+    if r.returncode != 0:
+        print("V1b'-0: тест соответствия кода спецификации ПРОВАЛЕН, "
+              "ступень не начинается", file=sys.stderr)
+        print(r.stdout[-3000:], file=sys.stderr)
+        return 1
+    print("V1b'-0: тест соответствия кода спецификации пройден", flush=True)
+
+    checked = 0
+    for stage in (1, 2):
+        p_new, p_old = merged_path(stage), PILOT / ("calibration_stage%d.json" % stage)
+        if not (p_new.exists() and p_old.exists()):
+            continue
+        old = {(round(x["pn_kc_scale"], 10), round(x["g_apl_rel"], 10)): x
+               for x in load(p_old)}
+        for x in load(p_new):
+            key = (round(x["pn_kc_scale"], 10), round(x["g_apl_rel"], 10))
+            y = old.get(key)
+            if y is None:
+                continue
+            checked += 1
+            for f in ("f_mean", "f_max"):
+                if x[f] != y[f]:
+                    print("V1b'-1а: расхождение с пилотом в точке %s, поле %s: "
+                          "%r против %r — недетерминизм, разбирать до калибровки"
+                          % (key, f, x[f], y[f]), file=sys.stderr)
+                    return 1
+    print("V1b'-1а: сверка с пилотом — %d общих точек, расхождений нет"
+          % checked, flush=True)
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--shard", type=int, default=0)
@@ -183,13 +230,19 @@ def main() -> int:
     ap.add_argument("--limit", type=int, default=0, help="прогнать только N точек")
     ap.add_argument("--stage", type=int, default=1, choices=[1, 2])
     ap.add_argument("--merge", action="store_true", help="собрать шарды и выбрать точку")
+    ap.add_argument("--skip-preconditions", action="store_true",
+                    help="не проверять предусловия V1b'-0 и V1b'-1а; только для "
+                         "отладки, подтверждающим прогон при этом не является")
     a = ap.parse_args()
 
     sys.path.insert(0, str(HERE))
     os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+    os.environ.setdefault("CALYX_V1B_OUT", str(OUT))
     if not (OUT / "spec_sha256.txt").exists():
-        print("предрегистрация не заморожена: запустите scripts/freeze_v1b.py",
-              file=sys.stderr)
+        print("предрегистрация не заморожена: запустите "
+              "scripts/freeze_v1b_prime.py", file=sys.stderr)
+        return 1
+    if not a.skip_preconditions and check_preconditions() != 0:
         return 1
     return merge(a) if a.merge else run_shard(a)
 

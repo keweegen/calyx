@@ -425,6 +425,89 @@ def t_choose(V, neurons, con):
        "тай-брейк по расстоянию Чебышёва до края не реализован")
 
 
+@check("V1b′-3.5а", "Если max_o r_t(o) + min_o r_t(o) = 0, величина MD_t "
+                     "не определена и считается НЕ выполнившей V1b-3.5")
+def t_md_undefined(V, neurons, con):
+    r = pd.DataFrame(np.full((6, 14), 10.0), index=V.T38, columns=V.PANEL_ALL)
+    r.iloc[:, 0] = 20.0                       # у всех типов MD определена и велика
+    r.iloc[0, :] = 0.0                        # молчащий тип: max + min = 0
+    res = V.check_mbon(r)
+    md = res["per_type"][V.T38[0]]["MD"]
+    true(md != md, "MD молчащего типа обязана быть не определена, получено %r" % md)
+    eq(res["n_md_ok"], 5, "молчащий тип в подсчёте MD не засчитывается")
+    eq(res["floor_ok"], False, "молчащий тип проваливает и пол")
+
+
+@check("V1b′-3.1а", "Число предъявлений набора P14-M - 6; окно измерения "
+                     "равно окну предъявления и начинается в t_on")
+def t_p14m_protocol(V, neurons, con):
+    eq(V.M_PULSE_MS, V.M_WINDOW_MS, "окно измерения равно окну предъявления")
+    eq(V.M_PULSE_MS, 5000, "длительность предъявления")
+    import inspect
+    src = inspect.getsource(V.eval_p14m)
+    true("M_PULSE_MS" in src and "M_WINDOW_MS" in src,
+         "прогон P14-M обязан идти на тайминге M")
+    true("SEED_EVAL_M" in inspect.signature(V.eval_p14m).parameters
+         or "SEED_EVAL_M" in src, "прогон-вердикт идёт на своих зёрнах")
+
+
+@check("V1b′-4.4", "Строка g_apl = 0 входит в сетку стадии 2 тогда и только "
+                    "тогда, когда среди кандидатов стадии 1 есть точка с "
+                    "нулевым гейном")
+def t_zero_gain_row(V, neurons, con):
+    ok = {"f_mean": 0.05, "f_max": 0.06}
+    without = V.grid_stage2([dict(ok, pn_kc_scale=2.0, g_apl_rel=10.0 ** -0.5)])
+    true(0.0 not in {g for _, g in without},
+         "нулевой гейн попал в сетку без кандидата с нулевым гейном")
+    with_zero = V.grid_stage2([dict(ok, pn_kc_scale=2.0, g_apl_rel=0.0),
+                               dict(ok, pn_kc_scale=2.0, g_apl_rel=10.0 ** -0.5)])
+    true(0.0 in {g for _, g in with_zero},
+         "нулевой гейн не попал в сетку при кандидате с нулевым гейном")
+
+
+@check("V1b′-4.4", "Расширение на шаг стадии 1 не обрезается диапазоном "
+                    "стадии 1: тонкая сетка законно выходит за грубую")
+def t_expansion_not_clipped(V, neurons, con):
+    s1_max = max(s for s, _ in V.grid_stage1())
+    g = V.grid_stage2([{"pn_kc_scale": s1_max, "g_apl_rel": 1.0,
+                        "f_mean": 0.05, "f_max": 0.06}])
+    eq(max(s for s, _ in g), s1_max * 2.0,
+       "верхняя граница масштаба стадии 2 при кандидате на краю грубой сетки")
+
+
+@check("V1b′-4.4", "Прямоугольник стадии 2 строится по КАНДИДАТАМ стадии 1, "
+                    "а не по допустимым точкам")
+def t_bbox_over_candidates(V, neurons, con):
+    # кандидат без вычисленного ограничения MBON: допустимым не является,
+    # но прямоугольник по нему строиться обязан
+    cand = [{"pn_kc_scale": 2.0, "g_apl_rel": 1.0, "f_mean": 0.05, "f_max": 0.06}]
+    eq(V.admissible(cand[0]), False, "кандидат без MBON допустимым не является")
+    true(len(V.grid_stage2(cand)) > 0,
+         "сетка стадии 2 пуста: прямоугольник построен по допустимым, а не по "
+         "кандидатам")
+
+
+@check("V1b′-4.6", "d(p) = min по q из D расстояния Чебышёва, D - недопустимые "
+                    "точки сетки И все узлы вне сетки; d >= 1 для любой точки")
+def t_chebyshev(V, neurons, con):
+    # сетка 5x5, допустимы все. Ближайшие узлы вне сетки лежат на индексах -1
+    # и 5, поэтому центральная точка (индекс 2) отстоит на 3, а угловая - на 1.
+    pts = [{"pn_kc_scale": float(i), "g_apl_rel": float(j),
+            "f_mean": 0.05, "f_max": 0.06, "mbon": MBON_OK}
+           for i in range(5) for j in range(5)]
+    m = V.chebyshev_margins(pts)
+    eq(m[(2.0, 2.0)], 3, "расстояние центральной точки сетки 5x5")
+    eq(m[(0.0, 0.0)], 1, "расстояние угловой точки: узлы вне сетки недопустимы")
+    true(all(v >= 1 for v in m.values()), "d >= 1 для любой точки")
+    # недопустимый сосед сокращает расстояние
+    pts2 = [dict(p) for p in pts]
+    for p in pts2:
+        if (p["pn_kc_scale"], p["g_apl_rel"]) == (3.0, 2.0):
+            p["mbon"] = dict(MBON_OK, floor_ok=False, pass_=False)
+    m2 = V.chebyshev_margins(pts2)
+    eq(m2[(2.0, 2.0)], 1, "недопустимый сосед сокращает расстояние до 1")
+
+
 @check("V1b-4.9", "Множество клеток - KC с меткой hemibrain_type на KCab "
                   "(1 771 клетка); окно эталона [t_on; t_on + 2 с]; учитываются "
                   "пары «клетка - запах», отвечающие по V1b-2.1-2.2")

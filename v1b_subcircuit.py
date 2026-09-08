@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -41,7 +42,10 @@ sys.path.insert(0, str(REPO))
 
 SUB = HERE / "data" / "mb_subcircuit"
 PANEL = HERE / "results" / "odor_panel" / "pn_rates_by_odor.tsv"
-OUT = HERE / "results" / "v1b"
+# Каталог артефактов ступени. По умолчанию - V1b (пилот); прогоны следующей
+# ступени задают его через CALYX_V1B_OUT, чтобы артефакты закрытой ступени не
+# перезаписывались артефактами новой.
+OUT = Path(os.environ.get("CALYX_V1B_OUT") or (HERE / "results" / "v1b"))
 
 # Окно измерения по [40]: импульс 1 с, амплитуда - средняя частота за 4 с от
 # начала импульса (спецификация, раздел 3е, V1b-2.1).
