@@ -1,0 +1,1068 @@
+[
+  {
+    "pn_kc_scale": 0.5,
+    "g_apl_rel": 0.0421696503428582,
+    "f_by_odor": {
+      "2-heptanone": 0.00019316206297083252,
+      "isopentyl acetate": 0.0,
+      "hexanal": 0.0005794861889124976,
+      "6-methyl-5-hepten-2-one": 0.00038632412594166504,
+      "diethyl succinate": 0.0,
+      "methyl octanoate": 0.00019316206297083252
+    },
+    "f_mean": 0.00022535574013263793,
+    "f_max": 0.0005794861889124976,
+    "s_ab": 1.25,
+    "s_apbp": NaN,
+    "s_g": 2.138888888888889,
+    "stage": 2,
+    "wall_s": 82.1
+  },
+  {
+    "pn_kc_scale": 0.5,
+    "g_apl_rel": 0.4216965034285819,
+    "f_by_odor": {
+      "2-heptanone": 0.0,
+      "isopentyl acetate": 0.0,
+      "hexanal": 0.0,
+      "6-methyl-5-hepten-2-one": 0.0,
+      "diethyl succinate": 0.0,
+      "methyl octanoate": 0.0
+    },
+    "f_mean": 0.0,
+    "f_max": 0.0,
+    "s_ab": NaN,
+    "s_apbp": NaN,
+    "s_g": NaN,
+    "stage": 2,
+    "wall_s": 87.9
+  },
+  {
+    "pn_kc_scale": 0.5946035575013605,
+    "g_apl_rel": 0.009999999999999998,
+    "f_by_odor": {
+      "2-heptanone": 0.005601699826154143,
+      "isopentyl acetate": 0.0054085377631833105,
+      "hexanal": 0.005988023952095809,
+      "6-methyl-5-hepten-2-one": 0.0030905930075333203,
+      "diethyl succinate": 0.0046358895112999805,
+      "methyl octanoate": 0.0017384585667374927
+    },
+    "f_mean": 0.004410533771167342,
+    "f_max": 0.005988023952095809,
+    "s_ab": 2.4020408163265308,
+    "s_apbp": NaN,
+    "s_g": 3.54375,
+    "stage": 2,
+    "wall_s": 90.6
+  },
+  {
+    "pn_kc_scale": 0.5946035575013605,
+    "g_apl_rel": 0.09999999999999994,
+    "f_by_odor": {
+      "2-heptanone": 0.00019316206297083252,
+      "isopentyl acetate": 0.0,
+      "hexanal": 0.0007726482518833301,
+      "6-methyl-5-hepten-2-one": 0.0005794861889124976,
+      "diethyl succinate": 0.0,
+      "methyl octanoate": 0.00019316206297083252
+    },
+    "f_mean": 0.0002897430944562488,
+    "f_max": 0.0007726482518833301,
+    "s_ab": 1.25,
+    "s_apbp": NaN,
+    "s_g": 2.4229166666666666,
+    "stage": 2,
+    "wall_s": 89.3
+  },
+  {
+    "pn_kc_scale": 0.5946035575013605,
+    "g_apl_rel": 0.9999999999999991,
+    "f_by_odor": {
+      "2-heptanone": 0.0,
+      "isopentyl acetate": 0.0,
+      "hexanal": 0.0,
+      "6-methyl-5-hepten-2-one": 0.0,
+      "diethyl succinate": 0.0,
+      "methyl octanoate": 0.0
+    },
+    "f_mean": 0.0,
+    "f_max": 0.0,
+    "s_ab": NaN,
+    "s_apbp": NaN,
+    "s_g": NaN,
+    "stage": 2,
+    "wall_s": 89.6
+  },
+  {
+    "pn_kc_scale": 0.7071067811865475,
+    "g_apl_rel": 0.023713737056616543,
+    "f_by_odor": {
+      "2-heptanone": 0.012941858219045779,
+      "isopentyl acetate": 0.011782885841220784,
+      "hexanal": 0.012555534093104115,
+      "6-methyl-5-hepten-2-one": 0.009271779022599961,
+      "diethyl succinate": 0.008692292833687464,
+      "methyl octanoate": 0.004829051574270813
+    },
+    "f_mean": 0.010012233597321485,
+    "f_max": 0.012941858219045779,
+    "s_ab": 2.8942090395480218,
+    "s_apbp": NaN,
+    "s_g": 3.725302245250432,
+    "stage": 2,
+    "wall_s": 90.3
+  },
+  {
+    "pn_kc_scale": 0.7071067811865475,
+    "g_apl_rel": 0.23713737056616535,
+    "f_by_odor": {
+      "2-heptanone": 0.0,
+      "isopentyl acetate": 0.0,
+      "hexanal": 0.0005794861889124976,
+      "6-methyl-5-hepten-2-one": 0.00038632412594166504,
+      "diethyl succinate": 0.0,
+      "methyl octanoate": 0.00019316206297083252
+    },
+    "f_mean": 0.00019316206297083252,
+    "f_max": 0.0005794861889124976,
+    "s_ab": 1.0,
+    "s_apbp": NaN,
+    "s_g": 2.17,
+    "stage": 2,
+    "wall_s": 90.3
+  },
+  {
+    "pn_kc_scale": 0.7071067811865475,
+    "g_apl_rel": 2.371373705661653,
+    "f_by_odor": {
+      "2-heptanone": 0.0,
+      "isopentyl acetate": 0.0,
+      "hexanal": 0.0,
+      "6-methyl-5-hepten-2-one": 0.0,
+      "diethyl succinate": 0.0,
+      "methyl octanoate": 0.0
+    },
+    "f_mean": 0.0,
+    "f_max": 0.0,
+    "s_ab": NaN,
+    "s_apbp": NaN,
+    "s_g": NaN,
+    "stage": 2,
+    "wall_s": 89.7
+  },
+  {
+    "pn_kc_scale": 0.8408964152537144,
+    "g_apl_rel": 0.05623413251903488,
+    "f_by_odor": {
+      "2-heptanone": 0.01583928916360827,
+      "isopentyl acetate": 0.015066640911724938,
+      "hexanal": 0.015452965037666602,
+      "6-methyl-5-hepten-2-one": 0.0160324512265791,
+      "diethyl succinate": 0.014293992659841607,
+      "methyl octanoate": 0.008692292833687464
+    },
+    "f_mean": 0.014229605305517997,
+    "f_max": 0.0160324512265791,
+    "s_ab": 3.2133744855967072,
+    "s_apbp": NaN,
+    "s_g": 3.751845238095238,
+    "stage": 2,
+    "wall_s": 91.2
+  },
+  {
+    "pn_kc_scale": 0.8408964152537144,
+    "g_apl_rel": 0.5623413251903486,
+    "f_by_odor": {
+      "2-heptanone": 0.0,
+      "isopentyl acetate": 0.0,
+      "hexanal": 0.0,
+      "6-methyl-5-hepten-2-one": 0.00019316206297083252,
+      "diethyl succinate": 0.0,
+      "methyl octanoate": 0.0
+    },
+    "f_mean": 3.219367716180542e-05,
+    "f_max": 0.00019316206297083252,
+    "s_ab": NaN,
+    "s_apbp": NaN,
+    "s_g": 1.0,
+    "stage": 2,
+    "wall_s": 91.9
+  },
+  {
+    "pn_kc_scale": 0.9999999999999998,
+    "g_apl_rel": 0.013335214321633237,
+    "f_by_odor": {
+      "2-heptanone": 0.10218273131157041,
+      "isopentyl acetate": 0.09252462816302878,
+      "hexanal": 0.07938960788101217,
+      "6-methyl-5-hepten-2-one": 0.07108363917326636,
+      "diethyl succinate": 0.0558238361985706,
+      "methyl octanoate": 0.05369905350589144
+    },
+    "f_mean": 0.07578391603888997,
+    "f_max": 0.10218273131157041,
+    "s_ab": 4.670589260808927,
+    "s_apbp": 1.0,
+    "s_g": 4.755571462658076,
+    "stage": 2,
+    "wall_s": 92.6
+  },
+  {
+    "pn_kc_scale": 0.9999999999999998,
+    "g_apl_rel": 0.13335214321633232,
+    "f_by_odor": {
+      "2-heptanone": 0.010430751400424957,
+      "isopentyl acetate": 0.010237589337454124,
+      "hexanal": 0.01216920996716245,
+      "6-methyl-5-hepten-2-one": 0.013907668533899941,
+      "diethyl succinate": 0.011976047904191617,
+      "methyl octanoate": 0.008499130770716632
+    },
+    "f_mean": 0.011203399652308288,
+    "f_max": 0.013907668533899941,
+    "s_ab": 3.123521505376344,
+    "s_apbp": NaN,
+    "s_g": 3.733407738095238,
+    "stage": 2,
+    "wall_s": 91.8
+  },
+  {
+    "pn_kc_scale": 0.9999999999999998,
+    "g_apl_rel": 1.3335214321633229,
+    "f_by_odor": {
+      "2-heptanone": 0.0,
+      "isopentyl acetate": 0.0,
+      "hexanal": 0.0,
+      "6-methyl-5-hepten-2-one": 0.0,
+      "diethyl succinate": 0.0,
+      "methyl octanoate": 0.0
+    },
+    "f_mean": 0.0,
+    "f_max": 0.0,
+    "s_ab": NaN,
+    "s_apbp": NaN,
+    "s_g": NaN,
+    "stage": 2,
+    "wall_s": 91.0
+  },
+  {
+    "pn_kc_scale": 1.1892071150027208,
+    "g_apl_rel": 0.03162277660168378,
+    "f_by_odor": {
+      "2-heptanone": 0.10701178288584122,
+      "isopentyl acetate": 0.09967162449294958,
+      "hexanal": 0.08924087309252463,
+      "6-methyl-5-hepten-2-one": 0.08093490438477884,
+      "diethyl succinate": 0.07089047711029554,
+      "methyl octanoate": 0.07050415298435388
+    },
+    "f_mean": 0.08637563582512396,
+    "f_max": 0.10701178288584122,
+    "s_ab": 5.060569105691057,
+    "s_apbp": 1.3333333333333333,
+    "s_g": 5.065160891089109,
+    "stage": 2,
+    "wall_s": 91.9
+  },
+  {
+    "pn_kc_scale": 1.1892071150027208,
+    "g_apl_rel": 0.31622776601683766,
+    "f_by_odor": {
+      "2-heptanone": 0.004249565385358316,
+      "isopentyl acetate": 0.0030905930075333203,
+      "hexanal": 0.0054085377631833105,
+      "6-methyl-5-hepten-2-one": 0.006953834266949971,
+      "diethyl succinate": 0.005794861889124976,
+      "methyl octanoate": 0.004056403322387483
+    },
+    "f_mean": 0.004925632605756229,
+    "f_max": 0.006953834266949971,
+    "s_ab": 2.316666666666667,
+    "s_apbp": NaN,
+    "s_g": 3.8666666666666663,
+    "stage": 2,
+    "wall_s": 91.2
+  },
+  {
+    "pn_kc_scale": 1.1892071150027208,
+    "g_apl_rel": 3.162277660168376,
+    "f_by_odor": {
+      "2-heptanone": 0.0,
+      "isopentyl acetate": 0.0,
+      "hexanal": 0.0,
+      "6-methyl-5-hepten-2-one": 0.0,
+      "diethyl succinate": 0.0,
+      "methyl octanoate": 0.0
+    },
+    "f_mean": 0.0,
+    "f_max": 0.0,
+    "s_ab": NaN,
+    "s_apbp": NaN,
+    "s_g": NaN,
+    "stage": 2,
+    "wall_s": 90.5
+  },
+  {
+    "pn_kc_scale": 1.4142135623730947,
+    "g_apl_rel": 0.07498942093324554,
+    "f_by_odor": {
+      "2-heptanone": 0.08595711802202048,
+      "isopentyl acetate": 0.08112806644774966,
+      "hexanal": 0.07224261155109137,
+      "6-methyl-5-hepten-2-one": 0.07398107011782885,
+      "diethyl succinate": 0.06393664284334556,
+      "methyl octanoate": 0.06837937029167472
+    },
+    "f_mean": 0.07427081321228511,
+    "f_max": 0.08595711802202048,
+    "s_ab": 4.839702517162471,
+    "s_apbp": NaN,
+    "s_g": 4.859513840428006,
+    "stage": 2,
+    "mbon": {
+      "floor_ok": false,
+      "ceiling_ok": true,
+      "md_ok": false,
+      "n_md_ok": 0,
+      "pass": false,
+      "per_type": {
+        "MBON11": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        },
+        "MBON12": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        },
+        "MBON13": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        },
+        "MBON14": {
+          "R_t": 0.019444444444444445,
+          "max": 0.08333333333333334,
+          "min": 0.0,
+          "MD": 1.0
+        },
+        "MBON17": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        },
+        "MBON18": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        }
+      },
+      "missing": []
+    },
+    "wall_s": 331.2
+  },
+  {
+    "pn_kc_scale": 1.4142135623730947,
+    "g_apl_rel": 0.7498942093324552,
+    "f_by_odor": {
+      "2-heptanone": 0.0007726482518833301,
+      "isopentyl acetate": 0.0005794861889124976,
+      "hexanal": 0.0017384585667374927,
+      "6-methyl-5-hepten-2-one": 0.002897430944562488,
+      "diethyl succinate": 0.0019316206297083252,
+      "methyl octanoate": 0.0009658103148541626
+    },
+    "f_mean": 0.0014809091494430496,
+    "f_max": 0.002897430944562488,
+    "s_ab": 1.676388888888889,
+    "s_apbp": NaN,
+    "s_g": 3.4127450980392156,
+    "stage": 2,
+    "wall_s": 92.6
+  },
+  {
+    "pn_kc_scale": 1.6817928305074286,
+    "g_apl_rel": 0.017782794100389222,
+    "f_by_odor": {
+      "2-heptanone": 0.24550898203592814,
+      "isopentyl acetate": 0.23855514776897818,
+      "hexanal": 0.21923894147189493,
+      "6-methyl-5-hepten-2-one": 0.1977979524821325,
+      "diethyl succinate": 0.18369712188526174,
+      "methyl octanoate": 0.19490052153757
+    },
+    "f_mean": 0.21328311119696094,
+    "f_max": 0.24550898203592814,
+    "s_ab": 7.881504136082955,
+    "s_apbp": 2.532456140350877,
+    "s_g": 8.001246105919005,
+    "stage": 2,
+    "wall_s": 93.2
+  },
+  {
+    "pn_kc_scale": 1.6817928305074286,
+    "g_apl_rel": 0.17782794100389215,
+    "f_by_odor": {
+      "2-heptanone": 0.056210160324512266,
+      "isopentyl acetate": 0.05254008112806645,
+      "hexanal": 0.0486768398686498,
+      "6-methyl-5-hepten-2-one": 0.05485802588371644,
+      "diethyl succinate": 0.0480973536797373,
+      "methyl octanoate": 0.04964265018350396
+    },
+    "f_mean": 0.0516708518446977,
+    "f_max": 0.056210160324512266,
+    "s_ab": 4.046485260770975,
+    "s_apbp": NaN,
+    "s_g": 4.339151098000656,
+    "stage": 2,
+    "mbon": {
+      "floor_ok": false,
+      "ceiling_ok": true,
+      "md_ok": false,
+      "n_md_ok": 0,
+      "pass": false,
+      "per_type": {
+        "MBON11": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        },
+        "MBON12": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        },
+        "MBON13": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        },
+        "MBON14": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        },
+        "MBON17": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        },
+        "MBON18": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        }
+      },
+      "missing": []
+    },
+    "wall_s": 332.8
+  },
+  {
+    "pn_kc_scale": 1.6817928305074286,
+    "g_apl_rel": 1.7782794100389212,
+    "f_by_odor": {
+      "2-heptanone": 0.00019316206297083252,
+      "isopentyl acetate": 0.00019316206297083252,
+      "hexanal": 0.0,
+      "6-methyl-5-hepten-2-one": 0.0015452965037666602,
+      "diethyl succinate": 0.00038632412594166504,
+      "methyl octanoate": 0.00019316206297083252
+    },
+    "f_mean": 0.0004185178031034705,
+    "f_max": 0.0015452965037666602,
+    "s_ab": 1.0,
+    "s_apbp": NaN,
+    "s_g": 1.8833333333333335,
+    "stage": 2,
+    "wall_s": 92.1
+  },
+  {
+    "pn_kc_scale": 1.9999999999999993,
+    "g_apl_rel": 0.0421696503428582,
+    "f_by_odor": {
+      "2-heptanone": 0.19567316978945334,
+      "isopentyl acetate": 0.19084411821518255,
+      "hexanal": 0.18079969094069925,
+      "6-methyl-5-hepten-2-one": 0.16244929495847016,
+      "diethyl succinate": 0.15858605369905351,
+      "methyl octanoate": 0.16785783272165347
+    },
+    "f_mean": 0.17603502672075208,
+    "f_max": 0.19567316978945334,
+    "s_ab": 6.864925595238095,
+    "s_apbp": 1.9196969696969701,
+    "s_g": 7.187431354263807,
+    "stage": 2,
+    "wall_s": 92.4
+  },
+  {
+    "pn_kc_scale": 1.9999999999999993,
+    "g_apl_rel": 0.4216965034285819,
+    "f_by_odor": {
+      "2-heptanone": 0.028008499130770716,
+      "isopentyl acetate": 0.024917906123237396,
+      "hexanal": 0.025883716438091557,
+      "6-methyl-5-hepten-2-one": 0.03418968514583736,
+      "diethyl succinate": 0.029553795634537378,
+      "methyl octanoate": 0.028587985319683214
+    },
+    "f_mean": 0.028523597965359606,
+    "f_max": 0.03418968514583736,
+    "s_ab": 3.3838283828382836,
+    "s_apbp": NaN,
+    "s_g": 3.754173813607776,
+    "stage": 2,
+    "wall_s": 93.4
+  },
+  {
+    "pn_kc_scale": 2.378414230005441,
+    "g_apl_rel": 0.009999999999999998,
+    "f_by_odor": {
+      "2-heptanone": 0.41066254587598994,
+      "isopentyl acetate": 0.39520958083832336,
+      "hexanal": 0.36893954027429016,
+      "6-methyl-5-hepten-2-one": 0.3386130963878694,
+      "diethyl succinate": 0.3208421865945528,
+      "methyl octanoate": 0.33996523082866525
+    },
+    "f_mean": 0.3623720301332818,
+    "f_max": 0.41066254587598994,
+    "s_ab": 11.983023654213612,
+    "s_apbp": 3.988888888888889,
+    "s_g": 11.863114664926023,
+    "stage": 2,
+    "wall_s": 94.7
+  },
+  {
+    "pn_kc_scale": 2.378414230005441,
+    "g_apl_rel": 0.09999999999999994,
+    "f_by_odor": {
+      "2-heptanone": 0.14622368166892022,
+      "isopentyl acetate": 0.14023565771682442,
+      "hexanal": 0.13849719915008693,
+      "6-methyl-5-hepten-2-one": 0.12458953061618698,
+      "diethyl succinate": 0.12111261348271199,
+      "methyl octanoate": 0.13019123044234113
+    },
+    "f_mean": 0.13347498551284528,
+    "f_max": 0.14622368166892022,
+    "s_ab": 5.8224181360201515,
+    "s_apbp": 1.0888888888888888,
+    "s_g": 6.199993469174504,
+    "stage": 2,
+    "wall_s": 93.0
+  },
+  {
+    "pn_kc_scale": 2.378414230005441,
+    "g_apl_rel": 0.9999999999999991,
+    "f_by_odor": {
+      "2-heptanone": 0.010430751400424957,
+      "isopentyl acetate": 0.010237589337454124,
+      "hexanal": 0.012555534093104115,
+      "6-methyl-5-hepten-2-one": 0.016611937415491596,
+      "diethyl succinate": 0.013907668533899941,
+      "methyl octanoate": 0.01371450647092911
+    },
+    "f_mean": 0.012909664541883975,
+    "f_max": 0.016611937415491596,
+    "s_ab": 2.644487179487179,
+    "s_apbp": NaN,
+    "s_g": 3.165867158671587,
+    "stage": 2,
+    "wall_s": 93.4
+  },
+  {
+    "pn_kc_scale": 2.828427124746189,
+    "g_apl_rel": 0.023713737056616543,
+    "f_by_odor": {
+      "2-heptanone": 0.3484643615993819,
+      "isopentyl acetate": 0.3368746378211319,
+      "hexanal": 0.3185242418389028,
+      "6-methyl-5-hepten-2-one": 0.2893567703303071,
+      "diethyl succinate": 0.2833687463782113,
+      "methyl octanoate": 0.3051960594939154
+    },
+    "f_mean": 0.31363080291030837,
+    "f_max": 0.3484643615993819,
+    "s_ab": 10.009536838765962,
+    "s_apbp": 3.728968253968254,
+    "s_g": 10.512752410405676,
+    "stage": 2,
+    "wall_s": 106.2
+  },
+  {
+    "pn_kc_scale": 2.828427124746189,
+    "g_apl_rel": 0.23713737056616535,
+    "f_by_odor": {
+      "2-heptanone": 0.10005794861889125,
+      "isopentyl acetate": 0.0938767626038246,
+      "hexanal": 0.0950357349816496,
+      "6-methyl-5-hepten-2-one": 0.09252462816302878,
+      "diethyl succinate": 0.08750241452578714,
+      "methyl octanoate": 0.08962719721846629
+    },
+    "f_mean": 0.09310411435194128,
+    "f_max": 0.10005794861889125,
+    "s_ab": 4.819471153846154,
+    "s_apbp": NaN,
+    "s_g": 5.149460043196544,
+    "stage": 2,
+    "wall_s": 103.5
+  },
+  {
+    "pn_kc_scale": 2.828427124746189,
+    "g_apl_rel": 2.371373705661653,
+    "f_by_odor": {
+      "2-heptanone": 0.002124782692679158,
+      "isopentyl acetate": 0.0011589723778249951,
+      "hexanal": 0.0038632412594166504,
+      "6-methyl-5-hepten-2-one": 0.010817075526366621,
+      "diethyl succinate": 0.006567510141008306,
+      "methyl octanoate": 0.008499130770716632
+    },
+    "f_mean": 0.0055051187946687265,
+    "f_max": 0.010817075526366621,
+    "s_ab": 1.9097826086956518,
+    "s_apbp": NaN,
+    "s_g": 2.5033333333333325,
+    "stage": 2,
+    "wall_s": 101.7
+  },
+  {
+    "pn_kc_scale": 3.3635856610148567,
+    "g_apl_rel": 0.05623413251903488,
+    "f_by_odor": {
+      "2-heptanone": 0.2677226192775739,
+      "isopentyl acetate": 0.25574657137338225,
+      "hexanal": 0.2516901680509948,
+      "6-methyl-5-hepten-2-one": 0.2184662932200116,
+      "diethyl succinate": 0.22484064129804907,
+      "methyl octanoate": 0.2346919065095615
+    },
+    "f_mean": 0.24219303328826217,
+    "f_max": 0.2677226192775739,
+    "s_ab": 7.937976539589443,
+    "s_apbp": 2.177777777777778,
+    "s_g": 8.76875094055681,
+    "stage": 2,
+    "wall_s": 103.7
+  },
+  {
+    "pn_kc_scale": 3.3635856610148567,
+    "g_apl_rel": 0.5623413251903486,
+    "f_by_odor": {
+      "2-heptanone": 0.059107591269074757,
+      "isopentyl acetate": 0.059880239520958084,
+      "hexanal": 0.06451612903225806,
+      "6-methyl-5-hepten-2-one": 0.06374348078037473,
+      "diethyl succinate": 0.06065288777284141,
+      "methyl octanoate": 0.06335715665443307
+    },
+    "f_mean": 0.06187624750499002,
+    "f_max": 0.06451612903225806,
+    "s_ab": 3.770290964777948,
+    "s_apbp": NaN,
+    "s_g": 4.0684134489099035,
+    "stage": 2,
+    "mbon": {
+      "floor_ok": false,
+      "ceiling_ok": true,
+      "md_ok": false,
+      "n_md_ok": 0,
+      "pass": false,
+      "per_type": {
+        "MBON11": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        },
+        "MBON12": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        },
+        "MBON13": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        },
+        "MBON14": {
+          "R_t": 0.005555555555555556,
+          "max": 0.016666666666666666,
+          "min": 0.0,
+          "MD": 1.0
+        },
+        "MBON17": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        },
+        "MBON18": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        }
+      },
+      "missing": []
+    },
+    "wall_s": 367.0
+  },
+  {
+    "pn_kc_scale": 3.9999999999999982,
+    "g_apl_rel": 0.013335214321633237,
+    "f_by_odor": {
+      "2-heptanone": 0.4904384778829438,
+      "isopentyl acetate": 0.4695769750820939,
+      "hexanal": 0.46242997875217307,
+      "6-methyl-5-hepten-2-one": 0.41780954220591077,
+      "diethyl succinate": 0.41723005601699825,
+      "methyl octanoate": 0.44330693451806064
+    },
+    "f_mean": 0.45013199407636334,
+    "f_max": 0.4904384778829438,
+    "s_ab": 15.009223248528059,
+    "s_apbp": 4.696969696969697,
+    "s_g": 15.276473537361582,
+    "stage": 2,
+    "wall_s": 105.3
+  },
+  {
+    "pn_kc_scale": 3.9999999999999982,
+    "g_apl_rel": 0.13335214321633232,
+    "f_by_odor": {
+      "2-heptanone": 0.2072628935677033,
+      "isopentyl acetate": 0.19219625265597837,
+      "hexanal": 0.18678771489279505,
+      "6-methyl-5-hepten-2-one": 0.1715279119180993,
+      "diethyl succinate": 0.1744253428626618,
+      "methyl octanoate": 0.17365269461077845
+    },
+    "f_mean": 0.18430880175133604,
+    "f_max": 0.2072628935677033,
+    "s_ab": 6.204605164949992,
+    "s_apbp": 1.861904761904762,
+    "s_g": 7.107135341941655,
+    "stage": 2,
+    "wall_s": 103.8
+  },
+  {
+    "pn_kc_scale": 3.9999999999999982,
+    "g_apl_rel": 1.3335214321633229,
+    "f_by_odor": {
+      "2-heptanone": 0.0326443886420707,
+      "isopentyl acetate": 0.029360633571566545,
+      "hexanal": 0.03380336101989569,
+      "6-methyl-5-hepten-2-one": 0.040370871160904,
+      "diethyl succinate": 0.03689395402742901,
+      "methyl octanoate": 0.040370871160904
+    },
+    "f_mean": 0.035574013263794994,
+    "f_max": 0.040370871160904,
+    "s_ab": 2.881521739130435,
+    "s_apbp": NaN,
+    "s_g": 3.347670737222976,
+    "stage": 2,
+    "mbon": {
+      "floor_ok": false,
+      "ceiling_ok": true,
+      "md_ok": false,
+      "n_md_ok": 0,
+      "pass": false,
+      "per_type": {
+        "MBON11": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        },
+        "MBON12": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        },
+        "MBON13": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        },
+        "MBON14": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        },
+        "MBON17": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        },
+        "MBON18": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        }
+      },
+      "missing": []
+    },
+    "wall_s": 368.5
+  },
+  {
+    "pn_kc_scale": 4.756828460010882,
+    "g_apl_rel": 0.03162277660168378,
+    "f_by_odor": {
+      "2-heptanone": 0.4137531388835233,
+      "isopentyl acetate": 0.39463009464941085,
+      "hexanal": 0.38632412594166504,
+      "6-methyl-5-hepten-2-one": 0.34788487541046936,
+      "diethyl succinate": 0.3515549546069152,
+      "methyl octanoate": 0.3677805678964651
+    },
+    "f_mean": 0.37698795956474146,
+    "f_max": 0.4137531388835233,
+    "s_ab": 11.308270676691729,
+    "s_apbp": 3.943452380952381,
+    "s_g": 12.631928383039156,
+    "stage": 2,
+    "wall_s": 105.5
+  },
+  {
+    "pn_kc_scale": 4.756828460010882,
+    "g_apl_rel": 0.31622776601683766,
+    "f_by_odor": {
+      "2-heptanone": 0.14467838516515355,
+      "isopentyl acetate": 0.13521344407958277,
+      "hexanal": 0.14042881977979524,
+      "6-methyl-5-hepten-2-one": 0.12748696156074946,
+      "diethyl succinate": 0.12439636855321615,
+      "methyl octanoate": 0.13019123044234113
+    },
+    "f_mean": 0.13373253493013973,
+    "f_max": 0.14467838516515355,
+    "s_ab": 4.837885751805647,
+    "s_apbp": 1.388888888888889,
+    "s_g": 5.504052511415526,
+    "stage": 2,
+    "wall_s": 104.5
+  },
+  {
+    "pn_kc_scale": 4.756828460010882,
+    "g_apl_rel": 3.162277660168376,
+    "f_by_odor": {
+      "2-heptanone": 0.014293992659841607,
+      "isopentyl acetate": 0.012748696156074947,
+      "hexanal": 0.014873478848754104,
+      "6-methyl-5-hepten-2-one": 0.024724744060266562,
+      "diethyl succinate": 0.022406799304616573,
+      "methyl octanoate": 0.024724744060266562
+    },
+    "f_mean": 0.01896207584830339,
+    "f_max": 0.024724744060266562,
+    "s_ab": 2.3060878243512977,
+    "s_apbp": NaN,
+    "s_g": 2.6977488151658764,
+    "stage": 2,
+    "wall_s": 104.5
+  },
+  {
+    "pn_kc_scale": 5.656854249492378,
+    "g_apl_rel": 0.07498942093324554,
+    "f_by_odor": {
+      "2-heptanone": 0.3347498551284528,
+      "isopentyl acetate": 0.3129225420127487,
+      "hexanal": 0.30963878694224456,
+      "6-methyl-5-hepten-2-one": 0.2750627776704655,
+      "diethyl succinate": 0.28066447749661966,
+      "methyl octanoate": 0.29437898396754875
+    },
+    "f_mean": 0.30123623720301335,
+    "f_max": 0.3347498551284528,
+    "s_ab": 8.20750237416904,
+    "s_apbp": 2.920930232558139,
+    "s_g": 9.670988446726572,
+    "stage": 2,
+    "wall_s": 105.4
+  },
+  {
+    "pn_kc_scale": 5.656854249492378,
+    "g_apl_rel": 0.7498942093324552,
+    "f_by_odor": {
+      "2-heptanone": 0.10083059687077459,
+      "isopentyl acetate": 0.08924087309252463,
+      "hexanal": 0.09464941085570794,
+      "6-methyl-5-hepten-2-one": 0.09754684180027043,
+      "diethyl succinate": 0.09349043847788295,
+      "methyl octanoate": 0.09464941085570794
+    },
+    "f_mean": 0.09506792865881142,
+    "f_max": 0.10083059687077459,
+    "s_ab": 3.733480825958702,
+    "s_apbp": NaN,
+    "s_g": 4.1886363636363635,
+    "stage": 2,
+    "wall_s": 105.2
+  },
+  {
+    "pn_kc_scale": 6.727171322029713,
+    "g_apl_rel": 0.017782794100389222,
+    "f_by_odor": {
+      "2-heptanone": 0.5449101796407185,
+      "isopentyl acetate": 0.5192196252655978,
+      "hexanal": 0.5165153563840061,
+      "6-methyl-5-hepten-2-one": 0.47247440602665636,
+      "diethyl succinate": 0.4672590303264439,
+      "methyl octanoate": 0.48889318137917714
+    },
+    "f_mean": 0.5015452965037667,
+    "f_max": 0.5449101796407185,
+    "s_ab": 17.336264333728746,
+    "s_apbp": 4.707632398753894,
+    "s_g": 18.322474747474747,
+    "stage": 2,
+    "wall_s": 108.2
+  },
+  {
+    "pn_kc_scale": 6.727171322029713,
+    "g_apl_rel": 0.17782794100389215,
+    "f_by_odor": {
+      "2-heptanone": 0.2628935677033031,
+      "isopentyl acetate": 0.24029360633571567,
+      "hexanal": 0.24319103728027816,
+      "6-methyl-5-hepten-2-one": 0.2213637241645741,
+      "diethyl succinate": 0.22812439636855322,
+      "methyl octanoate": 0.23237396175391153
+    },
+    "f_mean": 0.23804004893438932,
+    "f_max": 0.2628935677033031,
+    "s_ab": 5.944493541808293,
+    "s_apbp": 2.0966666666666667,
+    "s_g": 7.248638688327317,
+    "stage": 2,
+    "wall_s": 105.1
+  },
+  {
+    "pn_kc_scale": 6.727171322029713,
+    "g_apl_rel": 1.7782794100389212,
+    "f_by_odor": {
+      "2-heptanone": 0.06007340158392892,
+      "isopentyl acetate": 0.058528105080162256,
+      "hexanal": 0.06644774966196638,
+      "6-methyl-5-hepten-2-one": 0.06953834266949971,
+      "diethyl succinate": 0.06722039791384972,
+      "methyl octanoate": 0.06683407378790805
+    },
+    "f_mean": 0.06477367844955251,
+    "f_max": 0.06953834266949971,
+    "s_ab": 2.8286666666666664,
+    "s_apbp": NaN,
+    "s_g": 3.3143355771628022,
+    "stage": 2,
+    "mbon": {
+      "floor_ok": false,
+      "ceiling_ok": true,
+      "md_ok": false,
+      "n_md_ok": 0,
+      "pass": false,
+      "per_type": {
+        "MBON11": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        },
+        "MBON12": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        },
+        "MBON13": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        },
+        "MBON14": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        },
+        "MBON17": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        },
+        "MBON18": {
+          "R_t": 0.0,
+          "max": 0.0,
+          "min": 0.0,
+          "MD": NaN
+        }
+      },
+      "missing": []
+    },
+    "wall_s": 377.3
+  },
+  {
+    "pn_kc_scale": 7.9999999999999964,
+    "g_apl_rel": 0.0421696503428582,
+    "f_by_odor": {
+      "2-heptanone": 0.4695769750820939,
+      "isopentyl acetate": 0.44176163801429397,
+      "hexanal": 0.4409889897624107,
+      "6-methyl-5-hepten-2-one": 0.3954027429012942,
+      "diethyl succinate": 0.3984933359088275,
+      "methyl octanoate": 0.4151052733243191
+    },
+    "f_mean": 0.42688815916553996,
+    "f_max": 0.4695769750820939,
+    "s_ab": 11.765311368150485,
+    "s_apbp": 3.818736383442266,
+    "s_g": 13.853382425798316,
+    "stage": 2,
+    "wall_s": 107.8
+  },
+  {
+    "pn_kc_scale": 7.9999999999999964,
+    "g_apl_rel": 0.4216965034285819,
+    "f_by_odor": {
+      "2-heptanone": 0.20262700405640333,
+      "isopentyl acetate": 0.17886807031099092,
+      "hexanal": 0.19045779408924088,
+      "6-methyl-5-hepten-2-one": 0.17828858412207843,
+      "diethyl succinate": 0.17133474985512845,
+      "methyl octanoate": 0.1686304809735368
+    },
+    "f_mean": 0.18170111390122978,
+    "f_max": 0.20262700405640333,
+    "s_ab": 4.397646427476235,
+    "s_apbp": 1.491025641025641,
+    "s_g": 5.432899431105969,
+    "stage": 2,
+    "wall_s": 104.8
+  }
+]

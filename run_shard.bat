@@ -25,6 +25,8 @@ set DISTUTILS_USE_SDK=1
 set PYTHONIOENCODING=utf-8
 
 cd /d "%~dp0"
-if not exist "results\v1b\logs" mkdir "results\v1b\logs"
-.\.venv\Scripts\python.exe run_v1b_grid.py --shard %SHARD% --of %OF% --stage %STAGE% > "results\v1b\logs\s%STAGE%_shard%SHARD%.log" 2>&1
+rem Stage V1b' (specification v0.15): its own artefact and log directory, so
+rem that the artefacts of the closed stage V1b are not overwritten.
+if not exist "results\v1b_prime\logs" mkdir "results\v1b_prime\logs"
+.\.venv\Scripts\python.exe run_v1b_grid.py --shard %SHARD% --of %OF% --stage %STAGE% > "results\v1b_prime\logs\s%STAGE%_shard%SHARD%.log" 2>&1
 endlocal
