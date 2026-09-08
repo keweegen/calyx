@@ -1,0 +1,64 @@
+{
+  "stage": "V1b",
+  "spec_version": "v0.14",
+  "substrate": "FlyWire v630, подсхема mb_subcircuit",
+  "n_neurons": 6087,
+  "n_edges": 555544,
+  "substitutions": {
+    "dan_mask": {
+      "edges_removed": 49316,
+      "targets": [
+        "Kenyon_Cell",
+        "MBON"
+      ],
+      "source": "DAN"
+    },
+    "graded_apl": {
+      "form": "g_apl*max(0, v - v_0)",
+      "membrane": "из [2], без порога, сброса и рефрактерности"
+    },
+    "odor_input": {
+      "source": "[39] Hallem & Carlson 2006",
+      "transform": "[42] Olsen 2010, R_max=165, sigma=12, n=1.5, m=10.63",
+      "sides": "both",
+      "glomeruli": 24,
+      "upn": 115
+    }
+  },
+  "protocol": {
+    "pulse_ms": 1000,
+    "window_ms": 4000,
+    "trials": 6,
+    "mbon_pulse_ms": 5000,
+    "reference_window_ms": 2000
+  },
+  "panel": {
+    "n": 14,
+    "calibration": 6,
+    "evaluation": 8
+  },
+  "kc_response": {
+    "spikes_per_trial": 1,
+    "min_trials": 3,
+    "n_kc": 5177
+  },
+  "criteria": {
+    "f_band": [
+      0.03,
+      0.1
+    ],
+    "f_max": 0.1,
+    "overlap_separation_min": 0.25,
+    "overlap_ceiling": 0.4,
+    "mbon_floor_hz": 2.0,
+    "mbon_ceiling_hz": 67.0,
+    "mbon_md_min": 0.19,
+    "mbon_md_types": 5,
+    "spikes_ab_target": 2.2
+  },
+  "grid": {
+    "scale": "2^k, k=-6..2",
+    "g_apl": "{0} + g_ref*10^(k/2), k=-4..4",
+    "g_ref": "1/(v_th - v_0) = 1/7 mV^-1"
+  }
+}

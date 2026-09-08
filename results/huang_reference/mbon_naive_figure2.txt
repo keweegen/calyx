@@ -1,0 +1,19 @@
+Huang et al. 2024, Figure2 Panel c: naive MBON responses
+evoked rate = mean over 5-10 s minus mean over 0-5 s, in Hz
+6 types, 5 odours, 360 recordings
+
+type         baseline |   BEN_H    BEN_L      EtA      OCT      VIN |     MD    n
+MBON-a2sc         9.0 |    10.1      9.1      6.7     11.1      5.1 |   0.37   12
+MBON-a3          15.7 |    10.2      9.7      8.9     13.4     12.7 |   0.20   12
+MBON-a`2         16.7 |     6.0      7.4      8.6     11.2     11.4 |   0.31   12
+MBON-a`3m         9.5 |     9.4     11.4     14.0     12.0     11.4 |   0.19   12
+MBON-v1          28.0 |    16.6     14.5     21.7     18.3     23.4 |   0.23   12
+MBON-v2          19.6 |     2.0      5.0      7.8      3.3      7.5 |   0.59   12
+
+Quantities used by the V1b criterion (all evoked, Hz):
+  floor, min over types of the odour-averaged rate : 5.1  (MBON-v2)
+  min over (type, odour) cell means                : 2.0
+  ceiling, max over (type, odour) cell means       : 23.4
+  ceiling, max single recording                    : 67.2
+  modulation depth (max-min)/(max+min) by type     : 0.19-0.59, min 0.19 (MBON-a`3m)
+  baseline by type (not reproducible in the model) : 9.0-28.0

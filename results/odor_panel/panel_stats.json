@@ -19,18 +19,18 @@
   "mask": {
     "glomeruli": 24,
     "glomeruli_in_subcircuit": 55,
-    "upn_covered": 58,
-    "upn_total": 126,
-    "synapses_covered": 64132,
-    "synapses_total": 143813,
-    "synapse_fraction": 0.4459
+    "upn_covered": 115,
+    "upn_total": 252,
+    "synapses_covered": 139287,
+    "synapses_total": 314594,
+    "synapse_fraction": 0.4428
   },
   "kc_input_coverage": {
-    "median": 0.4207,
-    "q25": 0.2046,
-    "q75": 0.6125,
-    "below_0.1": 443,
-    "n_kc": 2618
+    "median": 0.4379,
+    "q25": 0.2516,
+    "q75": 0.6154,
+    "below_0.1": 542,
+    "n_kc": 4820
   },
   "checksums": {
     "ab2B.csv": "f0842af3100e377a7a3b44345e2ca3ff5359f12910a50229c11639648f507cbe",

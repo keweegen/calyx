@@ -142,9 +142,13 @@ def main() -> int:
 
     neurons = pd.read_csv(SUB / "neurons.csv")
     neurons = neurons.assign(gl=neurons.hemibrain_type.astype(str).str.split("_").str[0])
+    # Оба полушария. Отклик гломерулы присваивается всем её uPN независимо от
+    # стороны: отображение «рецептор → гломерула» стороны не различает, а запах
+    # в норме возбуждает обе антеннальные доли. Односторонняя стимуляция сделала
+    # бы половину компонент вектора перекрытия (раздел 3д) согласованными нулями
+    # и подняла бы корреляцию у всех пар разом.
     upn = neurons[(neurons.mb_role == "PN")
-                  & (neurons.cell_sub_class == "uniglomerular")
-                  & (neurons.side == "right")]
+                  & (neurons.cell_sub_class == "uniglomerular")]
 
     # отображение «гломерула -> рецептор»: у VC3 две hemibrain-гломерулы (VC3l, VC3m)
     # на один рецептор Or35a, и обе получают его отклик. Обратное отображение здесь
