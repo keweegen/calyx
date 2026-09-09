@@ -1,0 +1,89 @@
+{
+  "preflight": [
+    {
+      "check": "V1b'-0, тест соответствия кода спецификации",
+      "status": "пройден",
+      "summary": "все 42 проверок прошли"
+    },
+    {
+      "check": "план прогона объявлен до запуска и покрывает сетку",
+      "status": "пройдена",
+      "sha256_prefix": "16d0067b4dcb04a7",
+      "n_points": 285,
+      "n_shards": 8,
+      "points_per_shard": {
+        "0": 36,
+        "1": 36,
+        "2": 35,
+        "3": 36,
+        "4": 36,
+        "5": 35,
+        "6": 36,
+        "7": 35
+      }
+    },
+    {
+      "check": "V1c-E7.1, согласованность таблицы детекторов",
+      "status": "пройдена",
+      "A": 0.15749013123685912,
+      "theta_mV": 7.0,
+      "n_mbon_in_table": 97,
+      "n_mbon_with_kc_input": 96,
+      "n_detectors_by_node": {
+        "1": 0,
+        "1.6836": 0,
+        "1.7783": 1,
+        "3.1623": 2,
+        "5.3875": 7
+      },
+      "detectors_in_T38_any_node": 0
+    },
+    {
+      "check": "V1c-E7.1, структурный тест масштабирования",
+      "status": "пройдена",
+      "tol_rel_scaled": 1e-12,
+      "tol_other": "точное равенство",
+      "n_edges_kc_mbon": 62177,
+      "n_edges_other": 444051,
+      "by_node": [
+        {
+          "node": "1",
+          "sum_kc_mbon_mV": 70551.25,
+          "rel_error": 0.0,
+          "sum_other_mV": 273801.8642857143
+        },
+        {
+          "node": "1.6836",
+          "sum_kc_mbon_mV": 118780.08450000001,
+          "rel_error": 1.2251140660172582e-16,
+          "sum_other_mV": 273801.8642857143
+        },
+        {
+          "node": "1.7783",
+          "sum_kc_mbon_mV": 125461.28787500001,
+          "rel_error": 1.1598729356951336e-16,
+          "sum_other_mV": 273801.8642857143
+        },
+        {
+          "node": "3.1623",
+          "sum_kc_mbon_mV": 223104.21787500003,
+          "rel_error": 1.3044948559887778e-16,
+          "sum_other_mV": 273801.8642857143
+        },
+        {
+          "node": "5.3875",
+          "sum_kc_mbon_mV": 380094.859375,
+          "rel_error": 0.0,
+          "sum_other_mV": 273801.8642857143
+        }
+      ]
+    }
+  ],
+  "hashes": {
+    "experiment-spec-h1-h3.v0.17.frozen.md": "636c49968a0866bd0a10a9c4653f9072a381b8e283bd216fa425e8ef1334117b",
+    "config_v1c.json": "7ddaa3e9c2690aebd7b226978a7602cd2ee2754db4b072bef085491022808ff8",
+    "detector_table.json": "9a4a1590c3c228c320f90d5f780117e82c87e89a0623fd8026a4c0cd55136d03",
+    "weights_kc_mbon.json": "124f72e0d73f692383699210a02cebc3b7a6080c9db79620bd41d90869e57a35"
+  },
+  "fingerprint": "0524f95fca33fa9d"
+}

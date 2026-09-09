@@ -108,8 +108,21 @@ def odor_rates(odor: str, neurons: pd.DataFrame) -> dict[int, float]:
 def build(neurons: pd.DataFrame, con: pd.DataFrame, *, pn_kc_scale: float,
           g_apl: float, dan_mask: bool, graded_apl: bool,
           rates: dict[int, float] | None,
-          pulse_ms: int = T_PULSE_MS, run_ms: int = T_RUN_MS):
-    """Собрать сеть Brian 2. Возвращает (Network, SpikeMonitor, порядок id)."""
+          pulse_ms: int = T_PULSE_MS, run_ms: int = T_RUN_MS,
+          kc_mbon_scale: float = 1.0, record_vmax: bool = False):
+    """Собрать сеть Brian 2. Возвращает (Network, SpikeMonitor, порядок id).
+
+    kc_mbon_scale - третья ручка ступени V1c (V1c-E2.1): один глобальный скаляр
+    на вес каждого ребра KC->MBON подсхемы; прочие рёбра не затрагиваются. При
+    значении 1.0 ветка масштабирования не исполняется вовсе, поэтому сеть
+    тождественна сети V1b' побитово, а не с точностью до умножения на единицу.
+
+    record_vmax - наблюдатель для некритериального выхода V1c-E7.2: пиковое
+    значение мембранного потенциала за прогон, читаемое ДО сброса. Переменная
+    vmax ни в одно уравнение не входит и ни на одну другую переменную не
+    действует; её инертность доказывается побитовой сверкой V1c-E7.3 на узле
+    s = 1 с артефактами V1b', посчитанными без неё.
+    """
     from brian2 import (NeuronGroup, Synapses, PoissonGroup, SpikeMonitor,
                         Network, TimedArray, Hz, ms, mV)
     from model import default_params as dp
@@ -129,26 +142,46 @@ def build(neurons: pd.DataFrame, con: pd.DataFrame, *, pn_kc_scale: float,
     ci = {f: k for k, f in enumerate(core_ids)}
     ai = {f: k for k, f in enumerate(apl_ids)}
 
-    neu = NeuronGroup(len(core_ids), model=EQS_CORE, method="linear",
+    # Текст уравнений ядра не редактируется: наблюдатель дописывается
+    # отдельной строкой, чтобы регрессия поездов (v1c_regression_trains.py)
+    # продолжала проверять ровно ту константу EQS_CORE, по которой считает
+    # ступень.
+    eqs = EQS_CORE + ("    vmax : volt\n" if record_vmax else "")
+    neu = NeuronGroup(len(core_ids), model=eqs, method="linear",
                       threshold=dp["eq_th"], reset=dp["eq_rst"],
                       refractory="rfc", name="core", namespace=dp)
     neu.v = dp["v_0"]
     neu.g = 0 * mV
     neu.inh = 0 * mV
     neu.rfc = dp["t_rfc"]
+    if record_vmax:
+        # V1c-E7.2: максимум по всем шагам симулятора, значение v читается до
+        # сброса. Слот groups с порядком после интегратора - это состояние
+        # после интегрирования и до проверки порога (слот thresholds) и до
+        # сброса (слот resets), то есть ровно то, что требует спецификация.
+        # До начала импульса вход нулевой, фон модели [2] нулевой, поэтому v
+        # тождественно равно v_0, и максимум по всему прогону совпадает с
+        # максимумом по окну предъявления.
+        neu.vmax = dp["v_0"]
+        neu.run_regularly("vmax = clip(v, vmax, 1e9 * volt)",
+                          when="groups", order=1, name="vmax_tracker")
 
     objs = [neu]
 
     # рёбра внутри ядра
     e = con[con.Presynaptic_ID.isin(ci) & con.Postsynaptic_ID.isin(ci)]
     w = e["Excitatory x Connectivity"].to_numpy() * dp["w_syn"]
-    if pn_kc_scale != 1.0:
+    if pn_kc_scale != 1.0 or kc_mbon_scale != 1.0:
         pre_role = e.Presynaptic_ID.map(role).to_numpy()
         post_role = e.Postsynaptic_ID.map(role).to_numpy()
-        sel = (pre_role == "PN") & (post_role == "Kenyon_Cell")
         # не np.where: он срывает единицы Brian 2 и веса приходят безразмерными
         mult = np.ones(len(e))
-        mult[sel] = pn_kc_scale
+        if pn_kc_scale != 1.0:
+            mult[(pre_role == "PN") & (post_role == "Kenyon_Cell")] = pn_kc_scale
+        if kc_mbon_scale != 1.0:
+            # множества рёбер PN->KC и KC->MBON не пересекаются, поэтому
+            # порядок присваиваний на результат не влияет
+            mult[(pre_role == "Kenyon_Cell") & (post_role == "MBON")] = kc_mbon_scale
         w = w * mult
     syn = Synapses(neu, neu, "w : volt", on_pre="g += w",
                    delay=dp["t_dly"], name="core_syn")
@@ -227,7 +260,7 @@ def build(neurons: pd.DataFrame, con: pd.DataFrame, *, pn_kc_scale: float,
     stats = {"n_core": len(core_ids), "n_apl": len(apl_ids),
              "n_edges_core": len(e), "n_masked": n_masked,
              "n_apl_in": n_apl_in, "n_apl_out": n_apl_out,
-             "n_poisson": n_stim}
+             "n_poisson": n_stim, "kc_mbon_scale": float(kc_mbon_scale)}
     return net, mon, core_ids, stats
 
 
@@ -252,7 +285,8 @@ def run_odor(neurons: pd.DataFrame, con: pd.DataFrame, odor: str, *,
              pn_kc_scale: float, g_apl: float, seeds: list[int],
              dan_mask: bool = True, graded_apl: bool = True,
              pulse_ms: int = T_PULSE_MS, window_ms: int = T_WINDOW_MS,
-             extra_windows: tuple = ()) -> dict:
+             extra_windows: tuple = (), kc_mbon_scale: float = 1.0,
+             record_vmax: bool = False) -> dict:
     """Шесть предъявлений одного запаха. Возвращает счёт спайков по пробам.
 
     Сеть строится один раз; между пробами состояние восстанавливается и
@@ -266,8 +300,14 @@ def run_odor(neurons: pd.DataFrame, con: pd.DataFrame, odor: str, *,
     net, mon, core_ids, st = build(
         neurons, con, pn_kc_scale=pn_kc_scale, g_apl=g_apl,
         dan_mask=dan_mask, graded_apl=graded_apl, rates=rates,
-        pulse_ms=pulse_ms, run_ms=run_ms)
+        pulse_ms=pulse_ms, run_ms=run_ms, kc_mbon_scale=kc_mbon_scale,
+        record_vmax=record_vmax)
     net.store("init")
+    core_grp = net["core"] if record_vmax else None
+    # имя не vmax: локальная переменная с именем переменной группы протекает в
+    # пространство имён Brian и он печатает конфликт разрешения на каждой пробе
+    vmax_buf = (np.zeros((len(core_ids), len(seeds)), dtype=np.float64)
+                if record_vmax else None)
 
     wins = [(0.0, window_ms / 1000.0)] + [(a / 1000.0, b / 1000.0)
                                           for a, b in extra_windows]
@@ -287,17 +327,25 @@ def run_odor(neurons: pd.DataFrame, con: pd.DataFrame, odor: str, *,
             if int(mon.num_spikes) == prev:
                 break
         truncated_at.append(done)
+        if record_vmax:
+            # значение снимается после прогона пробы: сама переменная обновлена
+            # на каждом шаге до проверки порога и до сброса
+            from brian2 import mV as _mV
+            vmax_buf[:, k] = np.asarray(core_grp.vmax / _mV, dtype=np.float64)
         for idx, ts in mon.spike_trains().items():
             # имя не t: локальная t протекает в пространство имён Brian и
             # конфликтует с его внутренней переменной времени
             spk = np.asarray(ts) - T_ON_MS / 1000.0
             for wi, (a, b) in enumerate(wins):
                 counts[wi][idx, k] = ((spk >= a) & (spk < b)).sum()
-    return {"core_ids": core_ids, "counts": counts[0],
-            "counts_by_window": counts, "windows": wins,
-            "stats": st, "odor": odor, "seeds": list(seeds),
-            "pulse_ms": pulse_ms, "window_ms": window_ms,
-            "simulated_ms": truncated_at, "full_ms": run_ms}
+    out = {"core_ids": core_ids, "counts": counts[0],
+           "counts_by_window": counts, "windows": wins,
+           "stats": st, "odor": odor, "seeds": list(seeds),
+           "pulse_ms": pulse_ms, "window_ms": window_ms,
+           "simulated_ms": truncated_at, "full_ms": run_ms}
+    if record_vmax:
+        out["vmax_mV"] = vmax_buf
+    return out
 
 
 def kc_fraction(res: dict, neurons: pd.DataFrame) -> dict:
@@ -363,7 +411,8 @@ N_SUBSAMPLE, N_DRAWS = 120, 24  # V1b-3д: подвыборка «записи»
 
 def run_panel(neurons, con, odors, *, pn_kc_scale, g_apl, seed_base,
               pulse_ms=T_PULSE_MS, window_ms=T_WINDOW_MS, extra_windows=(),
-              dan_mask=True, graded_apl=True) -> dict:
+              dan_mask=True, graded_apl=True, kc_mbon_scale=1.0,
+              record_vmax=False) -> dict:
     """Прогнать набор запахов одним и тем же стендом."""
     seeds = [seed_base + i for i in range(1, N_TRIALS + 1)]
     out = {}
@@ -371,7 +420,8 @@ def run_panel(neurons, con, odors, *, pn_kc_scale, g_apl, seed_base,
         out[o] = run_odor(neurons, con, o, pn_kc_scale=pn_kc_scale, g_apl=g_apl,
                           seeds=seeds, dan_mask=dan_mask, graded_apl=graded_apl,
                           pulse_ms=pulse_ms, window_ms=window_ms,
-                          extra_windows=extra_windows)
+                          extra_windows=extra_windows,
+                          kc_mbon_scale=kc_mbon_scale, record_vmax=record_vmax)
     return out
 
 
@@ -775,14 +825,21 @@ def grid_stage2(stage1: list[dict]) -> list[tuple[float, float]]:
     return [(a, b) for a in out_s for b in out_g]
 
 
-def evaluate_point(neurons, con, odors, *, pn_kc_scale, g_apl_rel, seed_base) -> dict:
-    """Величины в точке сетки на заданном наборе запахов."""
+def evaluate_point(neurons, con, odors, *, pn_kc_scale, g_apl_rel, seed_base,
+                   kc_mbon_scale: float = 1.0) -> dict:
+    """Величины в точке сетки на заданном наборе запахов.
+
+    kc_mbon_scale по умолчанию 1.0: при этом значении ветка масштабирования в
+    build() не исполняется, и точка тождественна точке V1b'.
+    """
     g_abs = g_apl_rel * g_ref_value()
     by = run_panel(neurons, con, odors, pn_kc_scale=pn_kc_scale, g_apl=g_abs,
-                   seed_base=seed_base, extra_windows=((0, 2000),))
+                   seed_base=seed_base, extra_windows=((0, 2000),),
+                   kc_mbon_scale=kc_mbon_scale)
     f = {o: kc_fraction(by[o], neurons)["f"] for o in odors}
     vals = list(f.values())
     return {"pn_kc_scale": pn_kc_scale, "g_apl_rel": g_apl_rel,
+            "kc_mbon_scale": kc_mbon_scale,
             "f_by_odor": f, "f_mean": float(np.mean(vals)),
             "f_max": float(np.max(vals)),
             "s_ab": spikes_per_response(by, neurons, "KCab"),
@@ -959,7 +1016,8 @@ def eval_p14(neurons, con, *, pn_kc_scale: float, g_apl_rel: float,
 
 def eval_p14m(neurons, con, *, pn_kc_scale: float, g_apl_rel: float,
               seed_base: int = SEED_EVAL_M,
-              odors: list | None = None) -> dict:
+              odors: list | None = None, kc_mbon_scale: float = 1.0,
+              record_vmax: bool = False, return_by_odor: bool = False) -> dict:
     """Прогон P14-M: 14 запахов, предъявление 5 с, окно предъявления.
 
     Набор, на котором определён критерий отклика MBON (V1b-3.1). Дополнительное
@@ -971,14 +1029,18 @@ def eval_p14m(neurons, con, *, pn_kc_scale: float, g_apl_rel: float,
     by = run_panel(neurons, con, odors, pn_kc_scale=pn_kc_scale,
                    g_apl=g_abs, seed_base=seed_base,
                    pulse_ms=M_PULSE_MS, window_ms=M_WINDOW_MS,
-                   extra_windows=((0, 1000),))
+                   extra_windows=((0, 1000),), kc_mbon_scale=kc_mbon_scale,
+                   record_vmax=record_vmax)
     rep = mbon_report(by, neurons, M_WINDOW_MS)
-    rep.update({"point": {"pn_kc_scale": pn_kc_scale, "g_apl_rel": g_apl_rel},
+    rep.update({"point": {"pn_kc_scale": pn_kc_scale, "g_apl_rel": g_apl_rel,
+                          "kc_mbon_scale": kc_mbon_scale},
                 "seed_base": seed_base, "timing": "P14-M",
                 "pulse_ms": M_PULSE_MS,
                 "MBON11_spikes_first_second": mbon_type_spikes(
                     by, neurons, "MBON11", window_idx=1),
                 "MBON11_reference_29": "118 +- 8,3 спайка за 1 с импульса"})
+    if return_by_odor:
+        rep["_by_odor"] = by
     return rep
 
 

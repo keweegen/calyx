@@ -715,8 +715,130 @@ def t_v1c_weights_consistent(V, neurons, con):
     eq(max(d["w_max_mV"] for d in w["per_mbon"].values()),
        w["s_max"]["w_max_mV_all_mbon"], "максимум веса по всем клеткам")
     # структурный тест масштабирования на загруженной сети принадлежит
-    # прогонщику ступени и добавляется вместе с ним: здесь проверяется то,
-    # что проверяемо без запуска симулятора
+    # прогонщику ступени (v1c_stage.check_structural_scaling): он требует
+    # собранной сети Brian 2, а этот набор обязан идти секунды и стоять перед
+    # каждым шардом. Здесь проверяется то, что проверяемо без симулятора.
+
+
+# --- прогонщик ступени V1c ---------------------------------------------------
+@check("V1c-E2.1", "s умножает вес каждого ребра KC->MBON подсхемы; прочие "
+                   "рёбра не затрагиваются")
+def t_v1c_knob_edge_sets(V, neurons, con):
+    """V1c-E2.1  Множества рёбер PN->KC и KC->MBON не пересекаются."""
+    role = dict(zip(neurons.root_id, neurons.mb_role))
+    kept, _ = V.apply_dan_mask(con, role)
+    apl = set(neurons.loc[neurons.mb_role == "APL", "root_id"])
+    core = set(neurons.root_id) - apl
+    e = kept[kept.Presynaptic_ID.isin(core) & kept.Postsynaptic_ID.isin(core)]
+    pre = e.Presynaptic_ID.map(role).to_numpy()
+    post = e.Postsynaptic_ID.map(role).to_numpy()
+    sel_pn = (pre == "PN") & (post == "Kenyon_Cell")
+    sel_kc = (pre == "Kenyon_Cell") & (post == "MBON")
+    true(not bool((sel_pn & sel_kc).any()),
+         "рёбра PN->KC и KC->MBON пересеклись: порядок присваивания множителей "
+         "стал бы значимым")
+    true(bool(sel_pn.any()) and bool(sel_kc.any()),
+         "одно из множеств рёбер пусто")
+    w = _v1c_artifacts()[0]
+    eq(int(sel_kc.sum()), w["all_mbon"]["n_edges_kc"],
+       "рёбер KC->MBON в ядре против измерения V1c-E6.1")
+
+
+@check("V1c-E3.3", "Ступень прогоняется на 57 кандидатах V1b', умноженных на "
+                   "сетку по s; 285 трёхмерных точек")
+def t_v1c_grid3d(V, neurons, con):
+    """V1c-E3.3  285 трёхмерных точек: 57 кандидатов на пять узлов."""
+    import v1c_stage as S
+    g = S.grid_3d()
+    eq(len(g), 285, "число трёхмерных точек")
+    eq(len(S.candidates()), 57, "число кандидатов V1b'")
+    from collections import Counter
+    eq(sorted(Counter(i for i, _, _ in g).values()), [5] * 57,
+       "узлов на кандидата")
+    eq(sorted(Counter(s for _, _, s in g).values()), [57] * 5,
+       "кандидатов на узел")
+    # каждый кандидат обязан быть точкой, прошедшей ограничение по доле
+    for _, c, _ in g:
+        if not V.passes_fraction(c):
+            raise Fail("кандидат %r не проходит ограничение по доле"
+                       % ((c["pn_kc_scale"], c["g_apl_rel"]),))
+
+
+@check("V1c-E3.2", "Конфиг прогона читает узлы как строки, и во время "
+                   "исполнения узлы не перевычисляются")
+def t_v1c_nodes_from_config(V, neurons, con):
+    """V1c-E3.2  Узлы берутся строками из конфига, а не из формул."""
+    import v1c_stage as S
+    eq(S.nodes(), V1C_NODES, "узлы, прочитанные прогонщиком из конфига")
+    for s in S.nodes():
+        if not isinstance(s, str):
+            raise Fail("узел %r не строка" % (s,))
+    # граничные узлы округлены вниз: строгое неравенство обязано держаться и
+    # после перевода строки в число
+    w, _ = _v1c_artifacts()
+    a, theta = w["epsp"]["A"], w["model_constants"]["theta_mV"]
+    for s, wm in (("5.3875", w["s_max"]["w_max_mV_T38"]),
+                  ("1.6836", w["s_max"]["w_max_mV_all_mbon"])):
+        if not float(s) * a * wm < theta:
+            raise Fail("узел %s: неравенство не строгое после float(строка)" % s)
+
+
+@check("V1c-E7.2", "d = v_th - max_t v(t); d >= 0, и d = 0 тогда и только "
+                   "тогда, когда клетка дала спайк в этом окне")
+def t_v1c_threshold_map_definition(V, neurons, con):
+    """V1c-E7.2  Расстояние до порога: определение, знак и признак спайка."""
+    import v1c_stage as S
+    from model import default_params as dp
+    v_th = float(dp["v_th"] / (0.001 * 1.0))
+
+    apl = set(neurons.loc[neurons.mb_role == "APL", "root_id"])
+    core = sorted(set(neurons.root_id) - apl)
+    role = dict(zip(neurons.root_id, neurons.mb_role))
+    n_tr = 6
+    counts = np.zeros((len(core), n_tr), dtype=np.int32)
+    vmax = np.full((len(core), n_tr), v_th - 1.5)
+    mb = [k for k, i in enumerate(core) if role[i] == "MBON"]
+    counts[mb[0], 0] = 3                      # спайковавшая клетка
+    vmax[mb[0], 0] = v_th + 0.4               # у неё пик выше порога
+    vmax[mb[1], 1] = v_th - 0.25              # подпороговая, ближе к порогу
+    res = {"core_ids": core, "counts": counts, "vmax_mV": vmax,
+           "counts_by_window": [counts], "windows": [(0.0, 5.0)],
+           "seeds": list(range(n_tr))}
+    df = S.threshold_rows({"o1": res}, neurons, cand_idx=0,
+                          cand={"pn_kc_scale": 1.0, "g_apl_rel": 0.0},
+                          s_node="1", panel="C")
+    eq(len(df), 97 * n_tr, "строк на один запах: клетки MBON на пробы")
+    true(bool((df.d_peak_mV >= 0).all()), "d >= 0 во всех строках")
+    z = df[df.d_peak_mV == 0]
+    eq(int(len(z)), 1, "строк с d = 0")
+    true(bool(z.spiked.iloc[0]), "строка с d = 0 обязана быть спайковавшей")
+    eq(int(df.spiked.sum()), 1, "строк с признаком спайка")
+    sub = df[(df.mbon_id == core[mb[1]]) & (df.trial == 2)]
+    eq(float(sub.d_peak_mV.iloc[0]), 0.25, "d подпороговой клетки")
+    eq(str(df.d_peak_mV.dtype), "float32", "тип поля d_peak_mV")
+    eq(str(df.spiked.dtype), "bool", "тип поля spiked")
+    for col in ("cand_idx", "pn_kc_scale", "g_apl_rel", "s_node", "mbon_id",
+                "hemibrain_type", "panel", "odor", "trial", "d_peak_mV",
+                "spiked", "no_kc_input"):
+        true(col in df.columns, "в карте нет поля %s" % col)
+
+
+@check("V1c-E7.3", "Допуск побитовый: для целочисленных величин и списков - "
+                   "точное равенство, для чисел с плавающей точкой - точное "
+                   "равенство представлений")
+def t_v1c_bitwise(V, neurons, con):
+    """V1c-E7.3  Побитовое сравнение: NaN совпадает с NaN, близкое - нет."""
+    import v1c_stage as S
+    true(S._same(1.0, 1.0), "1.0 не совпало с 1.0")
+    true(not S._same(1.0, 1.0 + 2.220446049250313e-16), "близкие числа совпали")
+    true(S._same(float("nan"), float("nan")), "NaN не совпал с NaN")
+    true(not S._same(float("nan"), 0.0), "NaN совпал с нулём")
+    true(not S._same(0.0, -0.0), "нули разного знака совпали")
+    true(S._same([1, 2], [1, 2]) and not S._same([1, 2], [2, 1]),
+         "сравнение списков не побитовое")
+    true(S._same({"a": 1.5}, {"a": 1.5}) and not S._same({"a": 1.5}, {"b": 1.5}),
+         "сравнение словарей не побитовое")
+
 
 def main() -> int:
     ap = argparse.ArgumentParser()
