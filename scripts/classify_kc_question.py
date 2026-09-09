@@ -286,11 +286,56 @@ RESULT = {
         "mushroom_body_quote_verified_by_me": "it agreed with data for "
                                               "connections in the antennal lobe "
                                               "and mushroom body (Figure S3)",
+        "figure_S3_closed": {
+            "gate": "G1 ворот выпуска v0.12 — ЗАКРЫТ, исход FOUND",
+            "how": "опубликованная версия недоступна: Europe PMC отвечает "
+                   "«Article with id PMC8825683 is not open access one», а "
+                   "blob-эндпоинт PMC отдаёт страницу-заглушку. Легенда "
+                   "получена из препринта bioRxiv 10.1101/2021.08.19.456845 "
+                   "версии 1, где эта фигура имеет номер S4; текст извлечён из "
+                   "PDF лично",
+            "legend_verbatim_panel_C": "We compared PN-LHN connections to PN-KC "
+                "connections. The mean and standard deviation of these uEPSP "
+                "amplitudes were obtained from published measurements from "
+                "whole-cell recordings of KCs (Turner et al., 2008). Synapse "
+                "densities were obtained for all 10,739 connections from the "
+                "102 cholinergic uniglomerular PNs onto the 1927 traced KCs "
+                "reported in the hemibrain connectome. Error bars denote "
+                "standard deviation. uEPSP amplitudes for PN-KC connections "
+                "were highly consistent with those for PN-LHN connections, "
+                "although modestly lower than predicted.",
+            "legend_verbatim_summary": "Overall, this comparison indicates that "
+                "the relationship between synapse density and uEPSP amplitude "
+                "is broadly similar across cell classes, but also highlights "
+                "the importance of short-term synaptic plasticity in this "
+                "relationship.",
+            "what_liu_is_therefore_allowed_to_say_about_the_mushroom_body":
+                "что СРЕДНЯЯ ПО ПОПУЛЯЦИИ связь PN→KC согласуется с "
+                "зависимостью «плотность синапсов → амплитуда ВПСП», "
+                "установленной на пути PN→LHN. Это ОДНА агрегатная точка с "
+                "усами: среднее и стандартное отклонение амплитуды взяты из "
+                "популяционных записей Turner 2008, а плотность усреднена по "
+                "всем 10 739 связям hemibrain. Это не сравнение по связям и "
+                "тем более не сравнение по подтипам.",
+            "subtype_resolution_definitively_absent": "разбивки по αβ, α′β′ и γ "
+                "нет и не могло быть: физиология взята из Turner 2008, а та "
+                "популяционная. Цепочка источников делает подтип-разрешённое "
+                "сравнение физически невозможным в этой фигуре.",
+            "one_qualifier_from_the_legend_itself": "«although modestly lower "
+                "than predicted» — точка грибовидного тела лежит НЕСКОЛЬКО НИЖЕ "
+                "предсказанного зависимостью. Направление отклонения то же, что "
+                "у нашего наблюдения, но величина в легенде не названа, и "
+                "выводить из неё что-либо мы не будем.",
+            "consequence": "прежняя оговорка «Figure S3 я не видел» снимается, "
+                "и снимается в сторону ОСЛАБЛЕНИЯ роли Liu, а не усиления: "
+                "агрегатная точка поддерживает правило на уровне популяции и "
+                "молчит об уровне подтипов, где лежит наш вопрос.",
+        },
         "limits": [
             "основной массив — путь PN→LHN, латеральный рог, а не PN→KC; "
             "грибовидное тело входит только проверочными точками",
-            "Figure S3 — дополнительный материал, я её НЕ видел; утверждение о "
-            "согласии взято из основного текста",
+            "Figure S3 прочитана по препринту — см. поле figure_S3_closed; "
+            "оказалась ОДНОЙ агрегатной точкой, а не набором связей",
             "разбивки по подтипам KC нет ни в этой работе, ни в источнике "
             "физиологии PN→KC, на который она могла опираться",
         ],

@@ -35,3 +35,8 @@ results/**/run_plan_sha256.txt -text
 # сделала бы выданный файл отличным от хэшированного.
 results/**/kc_classification_stamp.json -text
 results/**/kc_classification_stamp_sha256.txt -text
+
+# Ворота выпуска ревизии v0.12: условия объявлены до проверок, хэш записан
+# рядом, поэтому нормализация переводов строки им запрещена.
+results/**/release_gate_v012.json -text
+results/**/release_gate_v012_sha256.txt -text
