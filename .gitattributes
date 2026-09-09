@@ -29,3 +29,9 @@ results/**/detector_table.json -text
 # хэшированного.
 results/**/run_plan.json -text
 results/**/run_plan_sha256.txt -text
+
+# Штамп классификации исхода V1c по литературе: объявляет правило до получения
+# ответа, его SHA-256 записан рядом, поэтому нормализация переводов строки
+# сделала бы выданный файл отличным от хэшированного.
+results/**/kc_classification_stamp.json -text
+results/**/kc_classification_stamp_sha256.txt -text
