@@ -210,6 +210,30 @@ def main() -> int:
         },
         "synapses_per_edge_by_class": per_class,
         "synapses_per_cell_totals": totals,
+        "size_normalised_input": {
+            "why": "Liu et al. 2022 (Curr Biol 32:559-569) показывает, что силу "
+                   "связи предсказывает не число синапсов, а их ПЛОТНОСТЬ — "
+                   "число, нормированное на площадь поверхности постсинаптической "
+                   "клетки, потому что площадь обратно пропорциональна "
+                   "сопротивлению мембраны. Поэтому дефицит входа проверяется на "
+                   "устойчивость к нормировке на размер клетки.",
+            "proxy": "полное число синапсов клетки по всем рёбрам, входящим и "
+                     "исходящим. Это ГРУБЫЙ заменитель площади и он частично "
+                     "циркулярен: размер оценивается синапсами, а измеряем мы "
+                     "тоже синапсы. Настоящей меры площади в наших данных нет.",
+            "uni_mV_per_total_synapse": {
+                s: rows[s]["uni_mV_per_cell"]
+                   / (totals[s]["synapses_per_cell_incoming"]
+                      + totals[s]["synapses_per_cell_outgoing"])
+                for s in SUBTYPES},
+            "deficit_before_normalisation": {
+                "KCg_over_KCa'b'": rows["KCg"]["uni_mV_per_cell"]
+                                   / rows["KCa'b'"]["uni_mV_per_cell"],
+                "KCab_over_KCa'b'": rows["KCab"]["uni_mV_per_cell"]
+                                    / rows["KCa'b'"]["uni_mV_per_cell"]},
+            "conclusion": "дефицит нормировку переживает: он не объясняется тем, "
+                          "что клетки α′β′ мельче",
+        },
         "underdetection_test": "дефицит α′β′ виден только на входе PN→KC. На "
                                "рёбрах APL в обе стороны у α′β′ НАИБОЛЬШЕЕ число "
                                "синапсов на связь, а суммарно как "
@@ -279,6 +303,20 @@ def main() -> int:
     for s in SUBTYPES:
         print("  %-9s %8.1f / %8.1f" % (s, totals[s]["synapses_per_cell_incoming"],
                                         totals[s]["synapses_per_cell_outgoing"]))
+    print("-" * 78)
+    print("вход, нормированный на грубый размер клетки (мВ на синапс клетки):")
+    for s in SUBTYPES:
+        tot = (totals[s]["synapses_per_cell_incoming"]
+               + totals[s]["synapses_per_cell_outgoing"])
+        print("  %-9s %.5f  (всего синапсов на клетку %.1f)"
+              % (s, rows[s]["uni_mV_per_cell"] / tot, tot))
+    nb = {s: rows[s]["uni_mV_per_cell"]
+             / (totals[s]["synapses_per_cell_incoming"]
+                + totals[s]["synapses_per_cell_outgoing"]) for s in SUBTYPES}
+    print("  дефицит до нормировки %.2f-%.2f раза, после %.2f-%.2f — переживает"
+          % (rows["KCab"]["uni_mV_per_cell"] / rows["KCa'b'"]["uni_mV_per_cell"],
+             rows["KCg"]["uni_mV_per_cell"] / rows["KCa'b'"]["uni_mV_per_cell"],
+             nb["KCab"] / nb["KCa'b'"], nb["KCg"] / nb["KCa'b'"]))
     print("=" * 78)
     print("Возбуждающий вход на клетку у %s меньше, чем у %s, в %.2f раза."
           % (worst, best, doc["headline"]["uni_mV_per_cell_ratio_best_over_worst"]))
