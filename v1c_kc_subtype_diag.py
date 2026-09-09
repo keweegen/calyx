@@ -24,7 +24,13 @@ FAIL-CAL-MBON-FLOOR, и его определили два типа MBON — MBO
     унигломерулярным (запах подаётся только на них);
   - доля клеток подтипа вовсе без унигломерулярного входа;
   - рёбра и суммарный вес торможения APL→KC на клетку при g_apl = 1;
-  - отношение торможения к возбуждению на клетку при g_apl = g_ref.
+  - отношение торможения к возбуждению на клетку при g_apl = g_ref;
+  - число синапсов на ребро по КЛАССАМ рёбер (PN→KC, APL→KC, DAN→KC, KC→MBON,
+    KC→APL, KC→KC) и суммарное число синапсов на клетку во входящих и в
+    исходящих рёбрах. Это проверка на недодетекцию: если синапсы подтипа
+    систематически недосчитаны реконструкцией или подтип просто мельче, дефицит
+    обязан быть виден на ВСЕХ классах рёбер. Если он виден только на одном
+    классе, это свойство схемы, а не измерительного тракта.
 
 Чего измерение НЕ говорит. Оно не говорит, сколько входов приходит
 одновременно: до порога доводит совпадение, а не сумма. Оно не говорит, что
@@ -142,6 +148,45 @@ def main() -> int:
             o: float((per_cell[s] > np.median(per_cell[o])).mean())
             for o in SUBTYPES if o != s}
 
+    # --- разбивка по классам рёбер: тест на недодетекцию ---
+    def by_class(df, key):
+        out = {}
+        for s in SUBTYPES:
+            v = df[df[key].map(kc) == s].Connectivity.to_numpy()
+            out[s] = {"n_edges": int(len(v)),
+                      "median": float(np.median(v)) if len(v) else None,
+                      "mean": float(v.mean()) if len(v) else None}
+        return out
+
+    pre_all = con.Presynaptic_ID.map(role)
+    post_all = con.Postsynaptic_ID.map(role)
+    classes = {
+        "PN->KC": (con[(pre_all == "PN") & (post_all == "Kenyon_Cell")],
+                   "Postsynaptic_ID"),
+        "APL->KC": (con[(pre_all == "APL") & (post_all == "Kenyon_Cell")],
+                    "Postsynaptic_ID"),
+        "DAN->KC": (con[(pre_all == "DAN") & (post_all == "Kenyon_Cell")],
+                    "Postsynaptic_ID"),
+        "KC->MBON": (con[(pre_all == "Kenyon_Cell") & (post_all == "MBON")],
+                     "Presynaptic_ID"),
+        "KC->APL": (con[(pre_all == "Kenyon_Cell") & (post_all == "APL")],
+                    "Presynaptic_ID"),
+        "KC->KC": (con[(pre_all == "Kenyon_Cell") & (post_all == "Kenyon_Cell")],
+                   "Presynaptic_ID"),
+    }
+    per_class = {k: by_class(df, key) for k, (df, key) in classes.items()}
+
+    inc, out_ = con[post_all == "Kenyon_Cell"], con[pre_all == "Kenyon_Cell"]
+    totals = {}
+    for s in SUBTYPES:
+        n = n_by[s]
+        totals[s] = {
+            "synapses_per_cell_incoming":
+                float(inc[inc.Postsynaptic_ID.map(kc) == s].Connectivity.sum()) / n,
+            "synapses_per_cell_outgoing":
+                float(out_[out_.Presynaptic_ID.map(kc) == s].Connectivity.sum()) / n,
+        }
+
     ratios = {s: rows[s]["inhibition_over_excitation"] for s in SUBTYPES}
     worst = max(ratios, key=ratios.get)
     best = min(ratios, key=ratios.get)
@@ -163,6 +208,18 @@ def main() -> int:
             "inhibition_over_excitation_ratio_worst_over_best":
                 ratios[worst] / ratios[best],
         },
+        "synapses_per_edge_by_class": per_class,
+        "synapses_per_cell_totals": totals,
+        "underdetection_test": "дефицит α′β′ виден только на входе PN→KC. На "
+                               "рёбрах APL в обе стороны у α′β′ НАИБОЛЬШЕЕ число "
+                               "синапсов на связь, а суммарно как "
+                               "пресинаптической клетки у них не меньше, чем у "
+                               "αβ. Систематическая недодетекция синапсов "
+                               "подтипа дала бы дефицит на всех классах рёбер; "
+                               "здесь этого нет, поэтому объяснение «тонкие "
+                               "отростки, синапсы недосчитаны» в его "
+                               "общеклеточной форме измерением не "
+                               "поддерживается.",
         "distribution_note": "мера перекрытия — вероятность превосходства: "
                              "0,5 означает неразличимые распределения, 0 — что "
                              "клетка подтипа всегда слабее. Она приведена "
@@ -210,6 +267,18 @@ def main() -> int:
     for s in SUBTYPES:
         for o, v in rows[s]["superiority_over"].items():
             print("  %-9s против %-9s %.3f" % (s, o, v))
+    print("-" * 78)
+    print("синапсов на ребро по классам (медиана) — тест на недодетекцию:")
+    print("%-12s %10s %10s %10s" % ("класс", *SUBTYPES))
+    for k, d in per_class.items():
+        print("%-12s %10s %10s %10s"
+              % (k, *["%.0f" % d[s]["median"] if d[s]["median"] is not None
+                      else "—" for s in SUBTYPES]))
+    print()
+    print("синапсов на клетку: входящие / исходящие")
+    for s in SUBTYPES:
+        print("  %-9s %8.1f / %8.1f" % (s, totals[s]["synapses_per_cell_incoming"],
+                                        totals[s]["synapses_per_cell_outgoing"]))
     print("=" * 78)
     print("Возбуждающий вход на клетку у %s меньше, чем у %s, в %.2f раза."
           % (worst, best, doc["headline"]["uni_mV_per_cell_ratio_best_over_worst"]))
