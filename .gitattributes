@@ -15,3 +15,10 @@ results/**/spec_sha256.txt -text
 results/**/*.stamp0.md -text
 results/**/stamp0_v1c.json -text
 results/**/stamp0_sha256.txt -text
+
+# Предрегистрация ступени V1c: байтовая копия спецификации подпадает под
+# правило *.frozen.md выше, хэши - под spec_sha256.txt. Конфиг ступени с пятью
+# каноническими узлами сетки и таблица детекторов хэшируются наравне с
+# спецификацией, поэтому нормализация переводов строки им тоже запрещена.
+results/**/config_v1c*.json -text
+results/**/detector_table.json -text

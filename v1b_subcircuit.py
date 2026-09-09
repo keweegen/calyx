@@ -63,6 +63,19 @@ N_TRIALS = 6                # V1b-2.2: шесть предъявлений
 MIN_TRIALS = 3              # V1b-2.2: ответ не менее чем на половине
 
 
+# Уравнения ядра: [2] плюс член градуального торможения. При выключенном
+# градуальном APL член остаётся тождественным нулю, поэтому уравнение
+# численно совпадает с [2] и регрессия к V1a не нарушается. Вынесено в
+# константу, чтобы регрессия поездов (v1c_regression_trains.py) проверяла
+# ровно тот текст, по которому считает ступень, а не его копию.
+EQS_CORE = """
+    dv/dt = (v_0 - v + g - inh) / t_mbr : volt (unless refractory)
+    dg/dt = -g / tau                    : volt (unless refractory)
+    inh                                 : volt
+    rfc                                 : second
+"""
+
+
 def load_substrate() -> tuple[pd.DataFrame, pd.DataFrame]:
     neurons = pd.read_csv(SUB / "neurons.csv")
     neurons = neurons.assign(
@@ -116,16 +129,7 @@ def build(neurons: pd.DataFrame, con: pd.DataFrame, *, pn_kc_scale: float,
     ci = {f: k for k, f in enumerate(core_ids)}
     ai = {f: k for k, f in enumerate(apl_ids)}
 
-    # Уравнения ядра: [2] плюс член градуального торможения. При выключенном
-    # градуальном APL член остаётся тождественным нулю, поэтому уравнение
-    # численно совпадает с [2] и регрессия к V1a не нарушается.
-    eqs_core = """
-        dv/dt = (v_0 - v + g - inh) / t_mbr : volt (unless refractory)
-        dg/dt = -g / tau                    : volt (unless refractory)
-        inh                                 : volt
-        rfc                                 : second
-    """
-    neu = NeuronGroup(len(core_ids), model=eqs_core, method="linear",
+    neu = NeuronGroup(len(core_ids), model=EQS_CORE, method="linear",
                       threshold=dp["eq_th"], reset=dp["eq_rst"],
                       refractory="rfc", name="core", namespace=dp)
     neu.v = dp["v_0"]

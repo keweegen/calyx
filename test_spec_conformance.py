@@ -585,6 +585,139 @@ def t_config_hash(V, neurons, con):
          "изменение НЕобъявленного ключа обязано ломать равенство хэшей")
 
 
+# --- предрегистрация ступени V1c (разделы 3з и 3и) ---------------------------
+#
+# Спецификация V1c требует «тест соответствия кода спецификации перед прогоном»
+# и относит к нему проверку согласованности таблицы детекторов и структурный
+# тест масштабирования (V1c-E7.1). Проверки ниже - их часть, исполнимая без
+# запуска симулятора.
+
+V1C_NODES = ["1", "1.6836", "1.7783", "3.1623", "5.3875"]
+
+
+def near(got, want, tol, what):
+    """Равенство с явным допуском: eq() держит жёсткие 1e-9."""
+    if not abs(float(got) - float(want)) <= tol:
+        raise Fail("%s: получено %.12g, спецификация требует %.12g "
+                   "(допуск %.3g)" % (what, got, want, tol))
+
+
+def _v1c_artifacts():
+    import json
+    d = HERE / "results" / "v1c"
+    w = json.loads((d / "weights_kc_mbon.json").read_text(encoding="utf-8"))
+    t = json.loads((d / "detector_table.json").read_text(encoding="utf-8"))
+    return w, t
+
+
+@check("V1c-E3.2", "Узлы сетки финальной версии - {1; 1,6836; 1,7783; 3,1623; "
+                   "5,3875}, пять узлов; список входит в хэш и не пополняется")
+def t_v1c_nodes(V, neurons, con):
+    """V1c-E3.2  Пять канонических узлов сетки по s, строками спецификации."""
+    import v1c_detectors as D
+    eq(list(D.NODES), V1C_NODES, "канонические узлы сетки")
+    _, t = _v1c_artifacts()
+    eq(list(t["nodes"]), V1C_NODES, "узлы таблицы детекторов")
+
+
+@check("V1c-E3.1", "s_max = (v_th - v_0) / (A * max_m w_max(m)) по клеткам "
+                   "шести типов T38; A - чистое число из t_mbr и tau")
+def t_v1c_smax(V, neurons, con):
+    """V1c-E3.1  s_max и s_pop пересчитываются из констант и весов."""
+    import math
+    w, _ = _v1c_artifacts()
+    c = w["model_constants"]
+    rho = c["t_mbr_ms"] / c["tau_ms"]
+    a = (1.0 / (rho - 1.0)) * (rho ** (-1.0 / (rho - 1.0))
+                               - rho ** (-rho / (rho - 1.0)))
+    near(a, w["epsp"]["A"], 1e-12, "множитель A")
+    near(a, 0.157490, 1e-6, "A с точностью записи спецификации")
+    t_star = (c["tau_ms"] * c["t_mbr_ms"] * math.log(rho)
+              / (c["t_mbr_ms"] - c["tau_ms"]))
+    near(t_star, 9.242, 5e-4, "время пика одиночного ВПСП")
+    theta = c["v_th_mV"] - c["v_0_mV"]
+    near(theta, 7.0, 1e-9, "порог θ")
+    near(theta / (a * w["s_max"]["w_max_mV_T38"]), 5.387542964, 1e-6, "s_max")
+    near(theta / (a * w["s_max"]["w_max_mV_all_mbon"]), 1.683607176, 1e-6,
+         "s_pop")
+
+
+@check("V1c-E3.2", "Граничные узлы округляются вниз, так что на них "
+                   "неравенство условия (5) остаётся строгим")
+def t_v1c_rounding(V, neurons, con):
+    """V1c-E3.2  Округление вниз оставляет строгими граничные неравенства."""
+    w, _ = _v1c_artifacts()
+    a = w["epsp"]["A"]
+    theta = w["model_constants"]["theta_mV"]
+    for node, w_max, who in ((5.3875, w["s_max"]["w_max_mV_T38"], "s_max/T38"),
+                             (1.6836, w["s_max"]["w_max_mV_all_mbon"],
+                              "s_pop/все MBON")):
+        if not node * a * w_max < theta:
+            raise Fail("на узле %s неравенство не строгое: %.10f >= %.1f"
+                       % (who, node * a * w_max, theta))
+
+
+@check("V1c-E2.2", "Условие (5): одиночный спайк одной клетки Кеньона не "
+                   "доводит ни один MBON множества T38 до порога")
+def t_v1c_condition5(V, neurons, con):
+    """V1c-E2.2  Ни на одном узле сетки нет детекторов среди типов T38."""
+    _, t = _v1c_artifacts()
+    for node in V1C_NODES:
+        eq(t["by_node"][node]["n_detectors_T38"], 0,
+           "детекторов в T38 на узле %s" % node)
+    if not t["condition5_holds_on_all_nodes"]:
+        raise Fail("артефакт не подтверждает условие (5)")
+
+
+@check("V1c-E7.1", "Клетка m есть детектор на узле s_k тогда и только тогда, "
+                   "когда s_k · A · w_max(m) > θ; неравенство строгое")
+def t_v1c_detectors(V, neurons, con):
+    """V1c-E7.1  Таблица детекторов пересчитывается из весов и совпадает."""
+    import v1c_detectors as D
+    w, t = _v1c_artifacts()
+    a, theta = w["epsp"]["A"], w["model_constants"]["theta_mV"]
+    for node in V1C_NODES:
+        want = sorted(int(k) for k, d in w["per_mbon"].items()
+                      if float(node) * a * d["w_max_mV"] > theta)
+        got = sorted(c["mbon_id"] for c in t["by_node"][node]["detectors"])
+        eq(got, want, "детекторы на узле %s" % node)
+    fresh = D.build()
+    eq(fresh["by_node"], t["by_node"], "таблица, пересчитанная скриптом")
+
+
+@check("V1c-E5", "Если у какого-либо типа T38 все клетки имеют нулевую сумму "
+                 "весов KC->m, ступень непроверяема по построению")
+def t_v1c_testability(V, neurons, con):
+    """V1c-E5  Все шесть типов T38 имеют ненулевой вход KC."""
+    w, _ = _v1c_artifacts()
+    eq(w["testability_V1c_E5"]["types_with_zero_total_weight"], [],
+       "типы T38 с нулевым входом KC")
+    for t38 in V.T38:
+        d = w["by_type_T38"][t38]
+        if d["n_cells"] == 0 or d["sum_w_mV_total"] <= 0:
+            raise Fail("тип %s не имеет входа KC" % t38)
+
+
+@check("V1c-E7.1", "Проверка согласованности: таблица пересчитывается из "
+                   "весов, загруженных тем же загрузчиком")
+def t_v1c_weights_consistent(V, neurons, con):
+    """V1c-E7.1  Веса KC->MBON артефакта сходятся с подсхемой и маской."""
+    w, _ = _v1c_artifacts()
+    eq(w["substrate"]["dan_mask_touches_kc_mbon"], False,
+       "маска подмен не касается рёбер KC->MBON")
+    eq(w["substrate"]["n_edges_kc_mbon_before_mask"],
+       w["substrate"]["n_edges_kc_mbon_after_mask"],
+       "число рёбер KC->MBON до и после маски")
+    eq(sum(d["n_edges_kc"] for d in w["per_mbon"].values()),
+       w["all_mbon"]["n_edges_kc"], "сумма рёбер по клеткам")
+    near(sum(d["sum_w_mV"] for d in w["per_mbon"].values()),
+         w["all_mbon"]["sum_w_mV_total"], 1e-6, "сумма весов по клеткам")
+    eq(max(d["w_max_mV"] for d in w["per_mbon"].values()),
+       w["s_max"]["w_max_mV_all_mbon"], "максимум веса по всем клеткам")
+    # структурный тест масштабирования на загруженной сети принадлежит
+    # прогонщику ступени и добавляется вместе с ним: здесь проверяется то,
+    # что проверяемо без запуска симулятора
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--verbose", action="store_true")
@@ -593,7 +726,8 @@ def main() -> int:
     import v1b_subcircuit as V
     neurons, con = V.load_substrate()
 
-    print("Соответствие кода спецификации V1b v0.14 (%d проверок)" % len(CHECKS))
+    print("Соответствие кода спецификации: V1b/V1b' и предрегистрация V1c "
+          "(%d проверок)" % len(CHECKS))
     print("=" * 78)
     failed = []
     for code, requirement, fn in CHECKS:

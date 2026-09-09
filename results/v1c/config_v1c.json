@@ -1,0 +1,75 @@
+{
+  "stage": "V1c",
+  "artefact_kind": "предрегистрация ступени",
+  "spec_version": "v0.17",
+  "spec_sections": [
+    "3з",
+    "3и"
+  ],
+  "derived_from_stamp0": {
+    "spec_version": "v0.16",
+    "spec_hash_prefix": "ed2952902a681c7b",
+    "spec_size_bytes": 246115,
+    "copy": "experiment-spec-h1-h3.v0.16.stamp0.md",
+    "difference_limited_by": "условие Д3; перечислено шестью позициями раздела «Происхождение»"
+  },
+  "knob": {
+    "name": "kc_mbon_scale",
+    "acts_on": "вес каждого ребра KC->MBON подсхемы",
+    "identity_at": "s = 1 тождественно конфигурации V1b'"
+  },
+  "grid_s": {
+    "nodes_canonical": [
+      "1",
+      "1.6836",
+      "1.7783",
+      "3.1623",
+      "5.3875"
+    ],
+    "n_nodes": 5,
+    "s_min": "1",
+    "s_pop_reportonly": "1.6836",
+    "s_max": "5.3875",
+    "n_per_decade": 4,
+    "rounding": "узлы формулы 10^(k/4) - по ближайшему, 4 знака; граничные узлы s_max и s_pop - вниз",
+    "A": 0.15749013123685912,
+    "theta_mV": 7.0,
+    "w_max_mV_T38": 8.25,
+    "w_max_mV_all_mbon": 26.400000000000002
+  },
+  "grid_other": {
+    "points": "57 кандидатов V1b'",
+    "n_3d_points": 285,
+    "fraction_recomputed_at_each_3d_point": true
+  },
+  "outcomes": [
+    "PASS-FULL",
+    "PASS-T38",
+    "FAIL-EVAL",
+    "FAIL-CAL-KC",
+    "FAIL-CAL-MBON-FLOOR",
+    "FAIL-CAL-MBON-CEIL",
+    "NOT-TESTABLE"
+  ],
+  "outcome_priority": "при одновременном выполнении определений FAIL-CAL-MBON-CEIL и FAIL-CAL-MBON-FLOOR записывается CEIL",
+  "expected_outcome": "FAIL-CAL-MBON-CEIL (категорией; положение полосы не вычисляется и не записывается)",
+  "non_criterial_outputs": {
+    "detector_table": "results/v1c/detector_table.json",
+    "threshold_map": "results/v1c/threshold_map.parquet и threshold_map_summary.json",
+    "reproduction_check_at_s1": "побитовая сверка с артефактами V1b' по величинам, которые V1b' заморозил"
+  },
+  "pre_hash_measurements_done": {
+    "E6.1": "results/v1c/weights_kc_mbon.json",
+    "E6.2": "results/diag_window/window_gap.json",
+    "E6.4": "results/v1c/regression_trains.json"
+  },
+  "unchanged_from_V1b_prime": [
+    "пороги 2 Гц, 67 Гц, 0,19 и правило 5 из 6",
+    "полоса доли отвечающих KC и её потолок",
+    "панель ступени, разведение наборов C и E, слепота E",
+    "таблица зёрен",
+    "протокол P14-M",
+    "источник PN-паттернов",
+    "определение ответа KC"
+  ]
+}
