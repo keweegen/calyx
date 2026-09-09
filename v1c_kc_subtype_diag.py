@@ -16,6 +16,10 @@ FAIL-CAL-MBON-FLOOR, и его определили два типа MBON — MBO
 
 Что вычисляется, объявлено до запуска:
   - число клеток каждого подтипа KC в подсхеме;
+  - распределение унигломерулярного входа ПО КЛЕТКАМ: квантили и мера
+    перекрытия распределений. Среднее по подтипу само по себе ничего не
+    доказывает: одно и то же среднее даёт и равномерный сдвиг, и несколько
+    выбросов при полном совпадении остальных;
   - рёбра и суммарный вес входа PN→KC на клетку, отдельно по всем PN и по
     унигломерулярным (запах подаётся только на них);
   - доля клеток подтипа вовсе без унигломерулярного входа;
@@ -87,6 +91,25 @@ def main() -> int:
     a = a[a["sub"].notna()]
 
     with_uni = set(uni.Postsynaptic_ID)
+
+    # вход на каждую клетку, включая клетки без входа как нули
+    per_cell = {}
+    g_uni = uni.groupby(["sub", "Postsynaptic_ID"]).w.sum()
+    for s in SUBTYPES:
+        ids = [i for i, v in kc.items() if v == s]
+        got = g_uni.loc[s] if s in g_uni.index.get_level_values(0) else None
+        vals = np.asarray(got.to_numpy() if got is not None else [])
+        per_cell[s] = np.concatenate([vals, np.zeros(len(ids) - len(vals))])
+
+    def superiority(x: np.ndarray, y: np.ndarray) -> float:
+        """P(случайная из x сильнее случайной из y), связки считаются половиной."""
+        import pandas as pd
+
+        allv = np.concatenate([x, y])
+        r = pd.Series(allv).rank().to_numpy()
+        return float((r[:len(x)].sum() - len(x) * (len(x) + 1) / 2)
+                     / (len(x) * len(y)))
+
     rows = {}
     for s in SUBTYPES:
         n = n_by[s]
@@ -106,7 +129,18 @@ def main() -> int:
             "apl_sum_mV_at_g1": float(ga.w.sum()),
             "apl_mV_per_cell_at_gref": inh,
             "inhibition_over_excitation": inh / ex,
+            "uni_per_cell_quantiles_mV": {
+                q: float(np.quantile(per_cell[s], v))
+                for q, v in (("p10", .10), ("p25", .25), ("median", .50),
+                             ("p75", .75), ("p90", .90))},
         }
+    for s in SUBTYPES:
+        rows[s]["superiority_over"] = {
+            o: superiority(per_cell[s], per_cell[o])
+            for o in SUBTYPES if o != s}
+        rows[s]["share_above_median_of"] = {
+            o: float((per_cell[s] > np.median(per_cell[o])).mean())
+            for o in SUBTYPES if o != s}
 
     ratios = {s: rows[s]["inhibition_over_excitation"] for s in SUBTYPES}
     worst = max(ratios, key=ratios.get)
@@ -129,6 +163,12 @@ def main() -> int:
             "inhibition_over_excitation_ratio_worst_over_best":
                 ratios[worst] / ratios[best],
         },
+        "distribution_note": "мера перекрытия — вероятность превосходства: "
+                             "0,5 означает неразличимые распределения, 0 — что "
+                             "клетка подтипа всегда слабее. Она приведена "
+                             "потому, что отношение средних одинаково "
+                             "совместимо и с равномерным сдвигом, и с "
+                             "несколькими выбросами при совпадении остальных.",
         "not_measured": [
             "число одновременно активных входов: до порога доводит совпадение, "
             "а не сумма",
@@ -155,6 +195,21 @@ def main() -> int:
                  r["apl_mV_per_cell_at_gref"], r["inhibition_over_excitation"],
                  r["cells_without_uni_input"],
                  100.0 * r["cells_without_uni_input"] / r["n_cells"]))
+    print("-" * 78)
+    print("распределение унигломерулярного входа по клеткам, мВ:")
+    print("%-9s %8s %8s %9s %8s %8s" % ("подтип", "10%", "25%", "медиана",
+                                        "75%", "90%"))
+    for s in SUBTYPES:
+        q = rows[s]["uni_per_cell_quantiles_mV"]
+        print("%-9s %8.2f %8.2f %9.2f %8.2f %8.2f"
+              % (s, q["p10"], q["p25"], q["median"], q["p75"], q["p90"]))
+    print()
+    print("вероятность, что случайная клетка подтипа сильнее случайной клетки "
+          "другого подтипа")
+    print("(0,5 — распределения неразличимы; 0 — всегда слабее):")
+    for s in SUBTYPES:
+        for o, v in rows[s]["superiority_over"].items():
+            print("  %-9s против %-9s %.3f" % (s, o, v))
     print("=" * 78)
     print("Возбуждающий вход на клетку у %s меньше, чем у %s, в %.2f раза."
           % (worst, best, doc["headline"]["uni_mV_per_cell_ratio_best_over_worst"]))
