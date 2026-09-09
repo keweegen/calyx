@@ -381,13 +381,11 @@ def threshold_rows(by_odor: dict, neurons, *, cand_idx: int, cand: dict,
             "no_kc_input": np.repeat(
                 np.array([i in no_kc for i in ids], dtype=bool), n_trials),
         }))
-    out = pd.concat(frames, ignore_index=True)
-    out["s_node"] = out["s_node"].astype("category")
-    out["panel"] = out["panel"].astype("category")
-    out["run"] = out["run"].astype("category")
-    out["odor"] = out["odor"].astype("category")
-    out["hemibrain_type"] = out["hemibrain_type"].astype("category")
-    return out
+    # Строковые столбцы остаются строками, а не категориями: у точек разные
+    # узлы s, склейка кадров с несовпадающими наборами категорий молча даёт
+    # object, и тип столбца в артефакте зависел бы от порядка склейки. Parquet
+    # словарное кодирование делает сам.
+    return pd.concat(frames, ignore_index=True)
 
 
 def zero_without_spike(by_odor: dict, neurons) -> int:

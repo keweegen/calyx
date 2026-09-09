@@ -286,7 +286,7 @@ def run_odor(neurons: pd.DataFrame, con: pd.DataFrame, odor: str, *,
              dan_mask: bool = True, graded_apl: bool = True,
              pulse_ms: int = T_PULSE_MS, window_ms: int = T_WINDOW_MS,
              extra_windows: tuple = (), kc_mbon_scale: float = 1.0,
-             record_vmax: bool = False) -> dict:
+             record_vmax: bool = False, return_trains: bool = False) -> dict:
     """Шесть предъявлений одного запаха. Возвращает счёт спайков по пробам.
 
     Сеть строится один раз; между пробами состояние восстанавливается и
@@ -304,6 +304,9 @@ def run_odor(neurons: pd.DataFrame, con: pd.DataFrame, odor: str, *,
         record_vmax=record_vmax)
     net.store("init")
     core_grp = net["core"] if record_vmax else None
+    # поезда как последовательности: нужны проверке исполнения перед прогоном
+    # ступени V1c, где сравнение по счётчикам слабее требуемого
+    trains = [] if return_trains else None
     # имя не vmax: локальная переменная с именем переменной группы протекает в
     # пространство имён Brian и он печатает конфликт разрешения на каждой пробе
     vmax_buf = (np.zeros((len(core_ids), len(seeds)), dtype=np.float64)
@@ -327,6 +330,10 @@ def run_odor(neurons: pd.DataFrame, con: pd.DataFrame, odor: str, *,
             if int(mon.num_spikes) == prev:
                 break
         truncated_at.append(done)
+        if return_trains:
+            from brian2 import second as _second
+            trains.append((np.asarray(mon.i[:], dtype=np.int64),
+                           np.asarray(mon.t[:] / _second, dtype=np.float64)))
         if record_vmax:
             # значение снимается после прогона пробы: сама переменная обновлена
             # на каждом шаге до проверки порога и до сброса
@@ -345,6 +352,8 @@ def run_odor(neurons: pd.DataFrame, con: pd.DataFrame, odor: str, *,
            "simulated_ms": truncated_at, "full_ms": run_ms}
     if record_vmax:
         out["vmax_mV"] = vmax_buf
+    if return_trains:
+        out["trains"] = trains
     return out
 
 

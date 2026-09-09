@@ -222,8 +222,10 @@ def run_pilot(a) -> int:
     Пилот первой точкой прогона не считается: он ничего не записывает в карту
     ступени и ни одной величины расстояния до порога не сохраняет. Его
     назначение - поймать неинертность наблюдателя за двенадцать минут, а не
-    через час прогона, и сделать это на уровне спайковых поездов, которого
-    V1c-E7.3 дать не может: замороженного эталона поездов у V1b' нет.
+    через час прогона, и сделать это на уровне спайковых ПОЕЗДОВ - того, чего
+    V1c-E7.3 дать не может: у V1b' заморожены агрегаты, а не поезда.
+    Сравниваются индексы клеток и времена спайков всех 72 предъявлений обоих
+    таймингов на наборе C, затем счётчики в окне измерения.
     """
     import numpy as np
     import v1b_subcircuit as V
@@ -238,11 +240,12 @@ def run_pilot(a) -> int:
     print("пилот: кандидат 0, pn_kc_scale %r, g_apl_rel %r"
           % (cand["pn_kc_scale"], cand["g_apl_rel"]), flush=True)
 
-    trains, counts = {}, {}
+    trains, counts, n_spikes = {}, {}, {}
     for tag, rec in (("без наблюдателя", False), ("с наблюдателем", True)):
         t0 = time.time()
-        got = {}
-        for timing, pulse, win, seed in (("P14", V.T_PULSE_MS, V.T_WINDOW_MS, V.SEED_CAL),
+        got_t, got_c, tot = {}, {}, 0
+        for timing, pulse, win, seed in (("P14", V.T_PULSE_MS, V.T_WINDOW_MS,
+                                          V.SEED_CAL),
                                          ("P14-M", V.M_PULSE_MS, V.M_WINDOW_MS,
                                           V.SEED_CAL_M)):
             seeds = [seed + i for i in range(1, V.N_TRIALS + 1)]
@@ -250,17 +253,29 @@ def run_pilot(a) -> int:
                 r = V.run_odor(neurons, con, o, pn_kc_scale=kw["pn_kc_scale"],
                                g_apl=kw["g_apl_rel"], seeds=seeds,
                                pulse_ms=pulse, window_ms=win,
-                               kc_mbon_scale=1.0, record_vmax=rec)
-                got[(timing, o)] = r["counts"]
-        counts[rec] = got
-        print("  %s: %.0f с, предъявлений %d"
-              % (tag, time.time() - t0, len(got) * V.N_TRIALS), flush=True)
+                               kc_mbon_scale=1.0, record_vmax=rec,
+                               return_trains=True)
+                got_c[(timing, o)] = r["counts"]
+                for k, (ii, tt) in enumerate(r["trains"]):
+                    got_t[(timing, o, k)] = (ii, tt)
+                    tot += len(ii)
+        counts[rec], trains[rec], n_spikes[rec] = got_c, got_t, tot
+        print("  %s: %.0f с, предъявлений %d, спайков %d"
+              % (tag, time.time() - t0, len(got_t), tot), flush=True)
 
-    same = all(np.array_equal(counts[False][k], counts[True][k])
-               for k in counts[False])
-    n_pres = len(counts[False]) * V.N_TRIALS
-    print("пилот: счётчики спайков на %d предъявлениях — %s"
-          % (n_pres, "совпадают побитово" if same else "РАСХОДЯТСЯ"), flush=True)
+    keys = sorted(trains[False], key=str)
+    same_t = (sorted(trains[True], key=str) == keys
+              and all(np.array_equal(trains[False][k][0], trains[True][k][0])
+                      and np.array_equal(trains[False][k][1], trains[True][k][1])
+                      for k in keys))
+    same_c = all(np.array_equal(counts[False][k], counts[True][k])
+                 for k in counts[False])
+    same = same_t and same_c
+    n_pres = len(keys)
+    print("пилот: поезда на %d предъявлениях (%d спайков) — %s; счётчики — %s"
+          % (n_pres, n_spikes[False],
+             "совпадают побитово" if same_t else "РАСХОДЯТСЯ",
+             "совпадают" if same_c else "РАСХОДЯТСЯ"), flush=True)
 
     doc = {"check": "пилот исполнения перед прогоном V1c",
            "status": "пройден" if same else "ПРОВАЛЕН",
@@ -268,8 +283,12 @@ def run_pilot(a) -> int:
            "candidate": {"cand_idx": 0, "pn_kc_scale": cand["pn_kc_scale"],
                          "g_apl_rel": cand["g_apl_rel"]},
            "n_presentations_compared": n_pres,
+           "n_spikes_compared": n_spikes[False],
            "timings": ["P14", "P14-M"], "panel": "C",
-           "spike_counts_identical": bool(same),
+           "spike_trains_identical": bool(same_t),
+           "spike_counts_identical": bool(same_c),
+           "compared": "индексы клеток и времена спайков каждого предъявления, "
+                       "затем счётчики в окне измерения",
            "vmax_values_written": False,
            "note": "значения vmax пилота не записываются: объявленная до "
                    "прогона часть отчёта не содержит ничего о расстоянии до "
@@ -384,6 +403,14 @@ def merge(a) -> int:
     import v1b_subcircuit as V
     import v1c_stage as S
 
+    h = S.halted()
+    if h:
+        print("прогон остановлен сигналом %s: %s" % (S.HALT, h["reason"]),
+              file=sys.stderr)
+        print("исход ступени — %s, основание: %s" % (h["outcome"], h["ground"]),
+              file=sys.stderr)
+        return 1
+
     pts, seen = [], set()
     heads = []
     for p in sorted(OUT.glob("v1c_grid.shard*.json")):
@@ -484,8 +511,11 @@ def _headline(V, pts: list[dict]) -> dict:
         out["n_in_K_by_node"][s] = len(ks)
         if not ks:
             continue
-        mins = [min(v["R_t"] for v in p["mbon"]["per_type"].values()) for p in ks]
-        maxs = [max(v["R_t"] for v in p["mbon"]["per_type"].values()) for p in ks]
+        rts = [[v["R_t"] for v in p["mbon"]["per_type"].values()] for p in ks]
+        mins = [min(r) for r in rts if r]
+        maxs = [max(r) for r in rts if r]
+        if not mins:
+            continue
         out["max_of_min_R_t_hz@%s" % s] = round(max(mins), 6)
         out["max_of_max_R_t_hz@%s" % s] = round(max(maxs), 6)
     out["floor_hz"], out["ceiling_hz"] = V.MBON_FLOOR_HZ, V.MBON_CEIL_HZ
