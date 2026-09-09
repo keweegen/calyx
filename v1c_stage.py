@@ -424,8 +424,12 @@ def threshold_summary(df: pd.DataFrame) -> dict:
     per_cell = g.agg(min="min", q10=lambda x: float(np.quantile(x, 0.10)),
                      median="median",
                      q90=lambda x: float(np.quantile(x, 0.90)), max="max")
-    per_cell["frac_zero"] = df.groupby(
-        ["cand_idx", "s_node", "mbon_id"], observed=True)["spiked"].mean()
+    # «доля предъявлений с d = 0» считается по самому d, а не по признаку
+    # спайка: величины тождественны по построению, но спецификация называет
+    # именно d, и совпадение этих двух подсчётов проверяется отдельно
+    # счётчиком zero_without_spike с объявленным ожиданием 0
+    per_cell["frac_zero"] = df.assign(_z=(df["d_peak_mV"] == 0)).groupby(
+        ["cand_idx", "s_node", "mbon_id"], observed=True)["_z"].mean()
     per_cell = per_cell.reset_index()
 
     types = df[["mbon_id", "hemibrain_type"]].drop_duplicates()
@@ -611,6 +615,13 @@ def outcome(points: list[dict]) -> dict:
                                   "объявленным ожиданием")
 
     ceil = [p for p in k if not p["mbon"]["ceiling_ok"]]
+    base["n_points_over_ceiling"] = len(ceil)
+    base["max_R_t_over_K_hz"] = max(
+        (max(v["R_t"] for v in p["mbon"]["per_type"].values())
+         for p in k if p["mbon"]["per_type"]), default=float("nan"))
+    base["max_R_t_over_all_points_hz"] = max(
+        (max(v["R_t"] for v in p["mbon"]["per_type"].values())
+         for p in points if p["mbon"]["per_type"]), default=float("nan"))
     if ceil:
         return dict(base, outcome="FAIL-CAL-MBON-CEIL", band=[],
                     n_points_over_ceiling=len(ceil),
