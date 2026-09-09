@@ -1,0 +1,76 @@
+{
+  "measurement": "баланс возбуждения и торможения по подтипам клеток Кеньона",
+  "status": "диагностика после закрытия ступени V1c; симулятор не запускался",
+  "why": "исход V1c определили два типа MBON, получающие 100 % входа от KCα′β′; здесь измеряется структурная причина молчания α′β′",
+  "source": "замороженная таблица связей подсхемы, тот же загрузчик и та же маска подмен, что у ступени",
+  "n_edges_masked": 49316,
+  "w_syn_mV": 0.275,
+  "g_ref": 0.14285714285714274,
+  "n_kc_labelled": 5177,
+  "by_subtype": {
+    "KCab": {
+      "n_cells": 1771,
+      "pn_edges": 10057,
+      "pn_edges_per_cell": 5.67871259175607,
+      "pn_sum_mV": 33555.775,
+      "pn_mV_per_cell": 18.947360248447207,
+      "uni_edges": 9701,
+      "uni_edges_per_cell": 5.477696216826652,
+      "uni_sum_mV": 33040.425,
+      "uni_mV_per_cell": 18.656366459627332,
+      "uni_share_of_pn_weight": 0.9846419878545497,
+      "cells_without_uni_input": 113,
+      "apl_edges": 1771,
+      "apl_edges_per_cell": 1.0,
+      "apl_sum_mV_at_g1": 9715.475,
+      "apl_mV_per_cell_at_gref": 0.7836956521739123,
+      "inhibition_over_excitation": 0.04200687491156662
+    },
+    "KCa'b'": {
+      "n_cells": 916,
+      "pn_edges": 3705,
+      "pn_edges_per_cell": 4.044759825327511,
+      "pn_sum_mV": 6418.775,
+      "pn_mV_per_cell": 7.007396288209606,
+      "uni_edges": 3400,
+      "uni_edges_per_cell": 3.7117903930131004,
+      "uni_sum_mV": 5973.275000000001,
+      "uni_mV_per_cell": 6.521042576419214,
+      "uni_share_of_pn_weight": 0.9305942333233368,
+      "cells_without_uni_input": 10,
+      "apl_edges": 933,
+      "apl_edges_per_cell": 1.0185589519650655,
+      "apl_sum_mV_at_g1": 5850.075000000001,
+      "apl_mV_per_cell_at_gref": 0.9123635371179033,
+      "inhibition_over_excitation": 0.13991068551171668
+    },
+    "KCg": {
+      "n_cells": 2490,
+      "pn_edges": 14083,
+      "pn_edges_per_cell": 5.65582329317269,
+      "pn_sum_mV": 50165.5,
+      "pn_mV_per_cell": 20.146787148594377,
+      "uni_edges": 12971,
+      "uni_edges_per_cell": 5.209236947791164,
+      "uni_sum_mV": 47292.3,
+      "uni_mV_per_cell": 18.99289156626506,
+      "uni_share_of_pn_weight": 0.9427255783357089,
+      "cells_without_uni_input": 234,
+      "apl_edges": 2490,
+      "apl_edges_per_cell": 1.0,
+      "apl_sum_mV_at_g1": 11534.875,
+      "apl_mV_per_cell_at_gref": 0.6617828456683872,
+      "inhibition_over_excitation": 0.034843712099311815
+    }
+  },
+  "headline": {
+    "uni_mV_per_cell_ratio_best_over_worst": 2.9125544487234887,
+    "inhibition_over_excitation_worst": "KCa'b'",
+    "inhibition_over_excitation_ratio_worst_over_best": 4.015378301627053
+  },
+  "not_measured": [
+    "число одновременно активных входов: до порога доводит совпадение, а не сумма",
+    "внутренняя возбудимость подтипов: модель [2] задаёт один набор параметров нейрона на все клетки, различия в ней отсутствуют по построению",
+    "соответствие живой мухе: требует данных о доле отвечающих KC по подтипам in vivo"
+  ]
+}
