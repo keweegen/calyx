@@ -8,3 +8,10 @@ results/**/*.frozen.md -text
 # строки сделала бы выданный на checkout файл отличным от хэшированного.
 results/**/config_v1b*.json -text
 results/**/spec_sha256.txt -text
+
+# Штамп 0 ступени V1c (правило Д1): его SHA-256 записан в stamp0_sha256.txt и
+# доказывает, что конструкция ступени старше до-хэшевых измерений. Нормализация
+# переводов строки лишила бы доказательство силы.
+results/**/*.stamp0.md -text
+results/**/stamp0_v1c.json -text
+results/**/stamp0_sha256.txt -text
