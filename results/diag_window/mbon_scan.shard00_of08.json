@@ -1,0 +1,92 @@
+[
+  {
+    "pn_kc_scale": 8.0,
+    "g_apl_rel": 0.0,
+    "R_t_T38": {
+      "MBON11": 243.73333333333332,
+      "MBON12": 128.49166666666667,
+      "MBON13": 79.625,
+      "MBON14": 225.51666666666665,
+      "MBON17": 38.083333333333336,
+      "MBON18": 229.625
+    },
+    "R_t_min": 38.083333333333336,
+    "R_t_max": 243.73333333333332,
+    "n_types_at_zero": 0,
+    "floor_ok": true,
+    "ceiling_ok": false,
+    "corridor_ok": false,
+    "types_missing": [],
+    "kc_spikes_6_odors": 12165025,
+    "mbon_spikes_6_odors": 500564,
+    "mbon_active_cells": 73,
+    "mbon_cells_total": 97,
+    "kc_responding_ge1_of2_any_odor_DIAG": 0.8446977013714506,
+    "n_kc_denominator": 5177,
+    "wall_s": 140.4,
+    "seeds": [
+      20260959,
+      20260960
+    ]
+  },
+  {
+    "pn_kc_scale": 8.0,
+    "g_apl_rel": 1.7783,
+    "R_t_T38": {
+      "MBON11": 0.0,
+      "MBON12": 0.0,
+      "MBON13": 0.0,
+      "MBON14": 0.004166666666666667,
+      "MBON17": 0.0,
+      "MBON18": 0.0
+    },
+    "R_t_min": 0.0,
+    "R_t_max": 0.004166666666666667,
+    "n_types_at_zero": 5,
+    "floor_ok": false,
+    "ceiling_ok": true,
+    "corridor_ok": false,
+    "types_missing": [],
+    "kc_spikes_6_odors": 71107,
+    "mbon_spikes_6_odors": 1,
+    "mbon_active_cells": 1,
+    "mbon_cells_total": 97,
+    "kc_responding_ge1_of2_any_odor_DIAG": 0.31369519026463205,
+    "n_kc_denominator": 5177,
+    "wall_s": 77.9,
+    "seeds": [
+      20260959,
+      20260960
+    ]
+  },
+  {
+    "pn_kc_scale": 4.0,
+    "g_apl_rel": 0.56234,
+    "R_t_T38": {
+      "MBON11": 0.0,
+      "MBON12": 0.0,
+      "MBON13": 0.0,
+      "MBON14": 0.020833333333333332,
+      "MBON17": 0.0,
+      "MBON18": 0.0
+    },
+    "R_t_min": 0.0,
+    "R_t_max": 0.020833333333333332,
+    "n_types_at_zero": 5,
+    "floor_ok": false,
+    "ceiling_ok": true,
+    "corridor_ok": false,
+    "types_missing": [],
+    "kc_spikes_6_odors": 94852,
+    "mbon_spikes_6_odors": 12,
+    "mbon_active_cells": 7,
+    "mbon_cells_total": 97,
+    "kc_responding_ge1_of2_any_odor_DIAG": 0.2795055051187947,
+    "n_kc_denominator": 5177,
+    "wall_s": 62.2,
+    "seeds": [
+      20260959,
+      20260960
+    ]
+  }
+]

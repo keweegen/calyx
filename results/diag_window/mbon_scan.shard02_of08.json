@@ -1,0 +1,92 @@
+[
+  {
+    "pn_kc_scale": 8.0,
+    "g_apl_rel": 0.031623,
+    "R_t_T38": {
+      "MBON11": 34.87499999999999,
+      "MBON12": 13.220833333333331,
+      "MBON13": 0.0,
+      "MBON14": 81.46666666666665,
+      "MBON17": 0.0,
+      "MBON18": 50.75833333333333
+    },
+    "R_t_min": 0.0,
+    "R_t_max": 81.46666666666665,
+    "n_types_at_zero": 2,
+    "floor_ok": false,
+    "ceiling_ok": false,
+    "corridor_ok": false,
+    "types_missing": [],
+    "kc_spikes_6_odors": 2049866,
+    "mbon_spikes_6_odors": 63552,
+    "mbon_active_cells": 44,
+    "mbon_cells_total": 97,
+    "kc_responding_ge1_of2_any_odor_DIAG": 0.6754877342090013,
+    "n_kc_denominator": 5177,
+    "wall_s": 127.8,
+    "seeds": [
+      20260959,
+      20260960
+    ]
+  },
+  {
+    "pn_kc_scale": 4.0,
+    "g_apl_rel": 0.0,
+    "R_t_T38": {
+      "MBON11": 201.36666666666667,
+      "MBON12": 96.5125,
+      "MBON13": 25.549999999999997,
+      "MBON14": 183.70416666666668,
+      "MBON17": 1.5916666666666668,
+      "MBON18": 190.4
+    },
+    "R_t_min": 1.5916666666666668,
+    "R_t_max": 201.36666666666667,
+    "n_types_at_zero": 0,
+    "floor_ok": false,
+    "ceiling_ok": false,
+    "corridor_ok": false,
+    "types_missing": [],
+    "kc_spikes_6_odors": 6589010,
+    "mbon_spikes_6_odors": 353314,
+    "mbon_active_cells": 56,
+    "mbon_cells_total": 97,
+    "kc_responding_ge1_of2_any_odor_DIAG": 0.7803747344021634,
+    "n_kc_denominator": 5177,
+    "wall_s": 84.9,
+    "seeds": [
+      20260959,
+      20260960
+    ]
+  },
+  {
+    "pn_kc_scale": 4.0,
+    "g_apl_rel": 1.7783,
+    "R_t_T38": {
+      "MBON11": 0.0,
+      "MBON12": 0.0,
+      "MBON13": 0.0,
+      "MBON14": 0.0,
+      "MBON17": 0.0,
+      "MBON18": 0.0
+    },
+    "R_t_min": 0.0,
+    "R_t_max": 0.0,
+    "n_types_at_zero": 6,
+    "floor_ok": false,
+    "ceiling_ok": true,
+    "corridor_ok": false,
+    "types_missing": [],
+    "kc_spikes_6_odors": 22062,
+    "mbon_spikes_6_odors": 0,
+    "mbon_active_cells": 0,
+    "mbon_cells_total": 97,
+    "kc_responding_ge1_of2_any_odor_DIAG": 0.15395016418775354,
+    "n_kc_denominator": 5177,
+    "wall_s": 62.8,
+    "seeds": [
+      20260959,
+      20260960
+    ]
+  }
+]

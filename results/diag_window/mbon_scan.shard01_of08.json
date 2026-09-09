@@ -1,0 +1,92 @@
+[
+  {
+    "pn_kc_scale": 8.0,
+    "g_apl_rel": 0.01,
+    "R_t_T38": {
+      "MBON11": 124.83333333333333,
+      "MBON12": 63.75833333333333,
+      "MBON13": 0.041666666666666664,
+      "MBON14": 136.15833333333333,
+      "MBON17": 0.0,
+      "MBON18": 129.39166666666665
+    },
+    "R_t_min": 0.0,
+    "R_t_max": 136.15833333333333,
+    "n_types_at_zero": 1,
+    "floor_ok": false,
+    "ceiling_ok": false,
+    "corridor_ok": false,
+    "types_missing": [],
+    "kc_spikes_6_odors": 4248021,
+    "mbon_spikes_6_odors": 184988,
+    "mbon_active_cells": 50,
+    "mbon_cells_total": 97,
+    "kc_responding_ge1_of2_any_odor_DIAG": 0.7311184083446011,
+    "n_kc_denominator": 5177,
+    "wall_s": 130.1,
+    "seeds": [
+      20260959,
+      20260960
+    ]
+  },
+  {
+    "pn_kc_scale": 8.0,
+    "g_apl_rel": 3.16228,
+    "R_t_T38": {
+      "MBON11": 0.0,
+      "MBON12": 0.0,
+      "MBON13": 0.0,
+      "MBON14": 0.0,
+      "MBON17": 0.0,
+      "MBON18": 0.0
+    },
+    "R_t_min": 0.0,
+    "R_t_max": 0.0,
+    "n_types_at_zero": 6,
+    "floor_ok": false,
+    "ceiling_ok": true,
+    "corridor_ok": false,
+    "types_missing": [],
+    "kc_spikes_6_odors": 39754,
+    "mbon_spikes_6_odors": 0,
+    "mbon_active_cells": 0,
+    "mbon_cells_total": 97,
+    "kc_responding_ge1_of2_any_odor_DIAG": 0.2559397334363531,
+    "n_kc_denominator": 5177,
+    "wall_s": 78.6,
+    "seeds": [
+      20260959,
+      20260960
+    ]
+  },
+  {
+    "pn_kc_scale": 4.0,
+    "g_apl_rel": 1.0,
+    "R_t_T38": {
+      "MBON11": 0.0,
+      "MBON12": 0.0,
+      "MBON13": 0.0,
+      "MBON14": 0.0,
+      "MBON17": 0.0,
+      "MBON18": 0.0
+    },
+    "R_t_min": 0.0,
+    "R_t_max": 0.0,
+    "n_types_at_zero": 6,
+    "floor_ok": false,
+    "ceiling_ok": true,
+    "corridor_ok": false,
+    "types_missing": [],
+    "kc_spikes_6_odors": 48639,
+    "mbon_spikes_6_odors": 0,
+    "mbon_active_cells": 0,
+    "mbon_cells_total": 97,
+    "kc_responding_ge1_of2_any_odor_DIAG": 0.20861502800849913,
+    "n_kc_denominator": 5177,
+    "wall_s": 62.5,
+    "seeds": [
+      20260959,
+      20260960
+    ]
+  }
+]
