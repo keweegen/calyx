@@ -115,7 +115,7 @@ def run_shard(a) -> int:
                                     ("V1b-3.4", t["ceiling_ok"]),
                                     ("V1b-3.5", t["md_ok"])) if not v]
             tail = "  passed on the fraction, no MBON: " + ", ".join(broke)
-        print("  [%d/%d] scale %.4g g %.4g -> f %.4f, f_max %.4f, s_ab %.2f, %.0f c%s"
+        print("  [%d/%d] scale %.4g g %.4g -> f %.4f, f_max %.4f, s_ab %.2f, %.0f s%s"
               % (k, len(todo), sc, g, pt["f_mean"], pt["f_max"], pt["s_ab"],
                  pt["wall_s"], tail), flush=True)
     print("shard %d ready" % a.shard, flush=True)
