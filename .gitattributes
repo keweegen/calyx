@@ -40,3 +40,8 @@ results/**/kc_classification_stamp_sha256.txt -text
 # рядом, поэтому нормализация переводов строки им запрещена.
 results/**/release_gate_v012.json -text
 results/**/release_gate_v012_sha256.txt -text
+
+# Русские оригиналы документов хранятся побайтово: их SHA-256 записан в
+# docs/ru/sha256.txt, и нормализация переводов строки сделала бы хранимый файл
+# отличным от того, который хэшировался.
+docs/ru/*.ru.md -text

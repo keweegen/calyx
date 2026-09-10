@@ -1,0 +1,7 @@
+# SHA-256 of the Russian originals, taken 2026-09-10, before the English translation.
+# These files are the binding text: where the English documents and these differ, these govern.
+# They are stored byte-for-byte (see .gitattributes) and are not edited after this commit.
+#
+connectome-testbed.v0.14.ru.md 229341 0f57fe040447bf4bf28a0b7eabf796280f5ca64f811eb74cc248188f1be58a49
+experiment-spec-h1-h3.v0.19.ru.md 315347 371fd8f6aace179817a2063af4a4497445a1d3a199a49d5d9a15e0df0d4fc55c
+note-sparseness-mbon-floor.2026-09-10.ru.md 35447 69cb53fb437cdaa70e3c3655bc2bfc621735d60b1fcd8715a6fa89ef3b26cdfc
