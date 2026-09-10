@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Output strings are deliberately Russian: this script must reproduce the
+# committed report byte-for-byte.
 """Отчёт ступени V1c: исход, карта по трёхмерной сетке, некритериальные выходы.
 
 Читает `results/v1c/report_map.json`, собранный run_v1c_grid.py --merge, и
@@ -68,11 +70,11 @@ def fmt(x, n=4):
 
 
 def _kc_composition(V):
-    """Состав входа KC->MBON каждого типа T38 по подтипам клеток Кеньона.
+    """KC->MBON input composition for each T38 type, by Kenyon-cell subtype.
 
-    Статическое чтение замороженной таблицы связей тем же загрузчиком и той же
-    маской подмен, какими пользуется ступень; симулятор не запускается.
-    Возвращает (доли суммы весов по подтипам, сумма весов не от KCa'b').
+    Static read of the frozen connectivity table with the same loader and
+    the same substitution mask the stage uses; the simulator is not run.
+    Returns (shares of the weight sum by subtype, weight sum not from KCa'b').
     """
     from model import default_params as dp
 
@@ -181,7 +183,7 @@ def main() -> int:
       % fmt(res.get("n_points_over_ceiling"), 0))
     w("")
 
-    # какие типы молчат и насколько далеко от порога
+    # which types are silent, and how far from the threshold
     sil, best_rt = {}, {}
     for s in ns:
         ks = [x for x in pts if x.get("candidate_at_s") and x["s_node"] == s]

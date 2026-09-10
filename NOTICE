@@ -1,57 +1,58 @@
-Calyx — стенд для проверки правил обучения на коннектоме дрозофилы
+Calyx — a testbed for validating learning rules on the Drosophila connectome
 Copyright 2026 16th Research Lab MMC
 
-Этот продукт распространяется по лицензии Apache License 2.0; полный текст —
-в файле LICENSE.
+This product is distributed under the Apache License 2.0; the full text is
+in the LICENSE file.
 
-ПРАВООБЛАДАТЕЛЬ И ЛИЦЕНЗИЯ. Правообладатель — 16th Research Lab MMC. Код и текст документов проекта отданы на одних
-условиях, Apache License 2.0. Таблица лицензий на сторонние данные и код —
-приложение В whitepaper.
+RIGHTS HOLDER AND LICENSE. The rights holder is 16th Research Lab MMC. The project's code and document text are released under
+the same terms, Apache License 2.0. The table of licenses for third-party data and code —
+Appendix C of the whitepaper.
 
 --------------------------------------------------------------------------------
-СТОРОННИЕ КОМПОНЕНТЫ
+THIRD-PARTY COMPONENTS
 
-Ни один из перечисленных ниже компонентов не входит в этот репозиторий: они
-загружаются скриптами из scripts/ и проверяются по контрольным суммам. Разбор —
-в DATA.md. Лицензии приведены здесь потому, что результаты работы стенда от этих
-компонентов производны.
+None of the components listed below are included in this repository: they
+are downloaded by scripts from scripts/ and verified by checksums. Details —
+in DATA.md. Licenses are given here because the testbed's results are derived
+from these components.
 
-1. Drosophila brain model — Shiu P. K., Spiller N. и соавторы
+1. Drosophila brain model — Shiu P. K., Spiller N. et al.
    https://github.com/philshiu/Drosophila_brain_model
-   Зафиксированный коммит 91bdd1e7dcf193f3e7ca5a8933497fcef63b7960
-   Лицензия кода: MIT, Copyright (c) 2023 Philip Shiu and Nico Spiller
-   Публикация: Shiu et al., Nature 634, 210-219 (2024),
+   Fixed commit 91bdd1e7dcf193f3e7ca5a8933497fcef63b7960
+   Code license: MIT, Copyright (c) 2023 Philip Shiu and Nico Spiller
+   Publication: Shiu et al., Nature 634, 210-219 (2024),
    https://doi.org/10.1038/s41586-024-07763-9
 
-2. Коннектом FlyWire (входит в состав репозитория из пункта 1)
-   Лицензия данных: CC BY-NC 4.0 — ОГРАНИЧЕНИЕ НЕКОММЕРЧЕСКОГО ИСПОЛЬЗОВАНИЯ.
-   Это ограничение НЕ распространяется на код настоящего репозитория, потому что
-   данные здесь не редистрибутируются. Но выходы прогонов, построенных на этих
-   данных, по нашему прочтению являются производным материалом и наследуют
-   ограничение NC; объём понятия Adapted Material для снимков весов и матриц
-   связей юридически не проверялся, и проект принимает консервативное прочтение.
-   Снять это ограничение проект не вправе: оно исходит от лицензиара.
-   Публикации: Dorkenwald et al., Nature 634, 124-138 (2024),
+2. The FlyWire connectome (included as part of the repository in item 1)
+   Data license: CC BY-NC 4.0 — NON-COMMERCIAL-USE RESTRICTION.
+   This restriction does NOT apply to the code of this repository, because
+   the data is not redistributed here. But the outputs of runs built on this
+   data, by our reading, are derived material and inherit
+   the NC restriction; the scope of the Adapted Material concept for weight
+   snapshots and connectivity matrices has not been legally verified, and the project
+   adopts the conservative reading.
+   The project has no right to lift this restriction: it originates from the licensor.
+   Publications: Dorkenwald et al., Nature 634, 124-138 (2024),
    https://doi.org/10.1038/s41586-024-07558-y;
    Schlegel et al., Nature 634, 139-152 (2024),
    https://doi.org/10.1038/s41586-024-07686-5
-   Правила цитирования: https://flywire.ai/principles
+   Citation rules: https://flywire.ai/principles
 
-3. Данные вольтажной регистрации — Huang C., Luo J. и соавторы
+3. Voltage-recording data — Huang C., Luo J. et al.
    Zenodo, https://doi.org/10.5281/zenodo.10998457
-   Лицензия: CC BY 4.0 — ограничения NC нет.
-   Публикация: Huang et al., Nature 634, 1141-1149 (2024),
+   License: CC BY 4.0 — no NC restriction.
+   Publication: Huang et al., Nature 634, 1141-1149 (2024),
    https://doi.org/10.1038/s41586-024-07819-w
-   Вычисленный из этих данных эталон (results/huang_reference/) публикуется
-   с указанием авторства источника, как того требует CC BY 4.0.
+   The reference computed from this data (results/huang_reference/) is published
+   with attribution to the source, as required by CC BY 4.0.
 
-4. Код модели грибовидного тела из работы пункта 3
+4. Mushroom-body model code from the work in item 3
    https://github.com/schnitzer-lab/Luo_Huang_2024_MB_model
-   Лицензия: GPL-3.0. В стенде НЕ ИСПОЛЬЗУЕТСЯ: копилефт несовместим с
-   пермиссивной лицензией этого репозитория. Ограничение касается только кода;
-   данные того же авторского коллектива (пункт 3) используются свободно.
+   License: GPL-3.0. NOT USED in the testbed: copyleft is incompatible with
+   the permissive license of this repository. The restriction concerns only the code;
+   the data from the same author group (item 3) is used freely.
 
 --------------------------------------------------------------------------------
-Библиотеки времени исполнения (Brian 2, numpy, pandas, scipy, pyarrow, joblib,
-matplotlib, sympy) устанавливаются из requirements.txt и распространяются под
-собственными лицензиями; в этот репозиторий они не входят.
+Runtime libraries (Brian 2, numpy, pandas, scipy, pyarrow, joblib,
+matplotlib, sympy) are installed from requirements.txt and distributed under
+their own licenses; they are not included in this repository.

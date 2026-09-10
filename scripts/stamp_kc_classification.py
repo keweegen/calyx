@@ -1,20 +1,22 @@
 # -*- coding: utf-8 -*-
-"""Штамп классификации: как читать литературу об α′β′ ДО того, как она прочитана.
+"""Classification stamp: how to read the α′β′ literature BEFORE it is read.
 
-Зачем. После закрытия ступени V1c открыт вопрос: молчание клеток Кеньона
-подтипа α′β′ — свойство функционального режима или артефакт семейства модели.
-Ответ зависит от литературы, которая на момент записи этого штампа ещё не
-прочитана. Правило классификации, записанное ПОСЛЕ чтения, есть выбор того
-прочтения, которое удобно; записанное ДО — есть предрегистрация. Лестница
-валидации построена на этом различении, и к литературному вопросу оно
-применяется так же, как к прогону.
+Why. After stage V1c closed, a question remains open: is the silence of
+Kenyon cells of subtype α′β′ a property of the functional regime, or an
+artifact of the model family. The answer depends on literature that, at the
+time this stamp is recorded, has not yet been read. A classification rule
+recorded AFTER reading is the choice of whichever reading is convenient;
+recorded BEFORE, it is pre-registration. The validation ladder is built on
+this distinction, and it applies to the literature question the same way it
+applies to a run.
 
-Что здесь. Три развилки с их следствиями, порядок сбора свидетельств и один
-явный запрет — всё продиктовано владельцем методологических решений 9 сентября
-2026 до запуска поиска по литературе и до получения его результата. Скрипт
-пишет артефакт и его хэш и отказывается перезаписывать уже записанный штамп.
+What's here. Three branches with their consequences, the order of evidence
+collection, and one explicit prohibition — all dictated by the owner of
+methodological decisions on September 9, 2026, before the literature search
+was started and before its result was obtained. The script writes the
+artefact and its hash and refuses to overwrite a stamp already recorded.
 
-Запуск:  python scripts/stamp_kc_classification.py
+Run:  python scripts/stamp_kc_classification.py
 """
 from __future__ import annotations
 
@@ -123,9 +125,9 @@ def main() -> int:
     p = OUT / "kc_classification_stamp.json"
     h = OUT / "kc_classification_stamp_sha256.txt"
     if p.exists():
-        print("штамп уже записан: %s\nперезапись запрещена: он объявляет правило "
-              "ДО получения ответа, и переписать его после значило бы выбрать "
-              "правило под ответ." % p, file=sys.stderr)
+        print("stamp already recorded: %s\noverwriting is forbidden: it declares "
+              "the rule BEFORE the answer is obtained, and rewriting it afterward "
+              "would mean picking the rule to fit the answer." % p, file=sys.stderr)
         return 1
     OUT.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(STAMP, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -138,11 +140,11 @@ def main() -> int:
         "# Дата записи: 2026-09-09\n"
         "kc_classification_stamp.json %d %s\n" % (p.stat().st_size, digest),
         encoding="utf-8")
-    print("штамп записан: %s\nхэш: %s" % (p, digest[:16]))
-    print("\nразвилки:")
+    print("stamp recorded: %s\nhash: %s" % (p, digest[:16]))
+    print("\nbranches:")
     for b in STAMP["branches"]:
         print("  %s. %s\n     -> %s" % (b["id"], b["finding"], b["consequence"]))
-    print("\nзапрет: %s" % STAMP["prohibition"]["rule"])
+    print("\nprohibition: %s" % STAMP["prohibition"]["rule"])
     return 0
 
 

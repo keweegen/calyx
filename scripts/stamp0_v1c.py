@@ -1,22 +1,24 @@
 # -*- coding: utf-8 -*-
-"""Записать штамп 0 ступени V1c: хэш черновика спецификации и байтовая копия.
+"""Record stamp 0 of stage V1c: hash of the spec draft and a byte copy.
 
-Штамп 0 - не предрегистрация ступени. Это конструкция ступени, записанная
-формулами и без чисел, которые могут дать до-хэшевые измерения, и захэшированная
-ДО их запуска. Правило Д (спецификация, раздел 1а) допускает диагностику между
-закрытием одной ступени и заморозкой следующей только при существующем штампе 0:
-иначе увиденное может сдвинуть критерии и границы сетки к увиденному значению,
-формально не нарушив предрегистрацию.
+Stamp 0 is not the stage's pre-registration. It is the stage's design, written
+down in formulas and without any numbers that pre-hash measurements could
+supply, and hashed BEFORE those measurements run. Rule D (spec, section 1a)
+allows diagnostics between the closure of one stage and the freeze of the next
+only when stamp 0 already exists: otherwise what was seen could shift the
+criteria and grid boundaries toward the observed value without formally
+violating pre-registration.
 
-Предрегистрацией V1c станет более поздняя версия документа, в которой числа
-подставлены по формулам раздела 3з и заполнены разделы «Происхождение» и
-«Ожидаемый исход». Она получит собственный хэш другим скриптом. Разность между
-штампом 0 и той версией ограничена условием Д3 и перечисляется в «Происхождении».
+V1c's pre-registration will be a later version of the document, in which the
+numbers have been substituted from the formulas of section 3з and the
+"Provenance" and "Expected outcome" sections have been filled in. It will get
+its own hash from a different script. The difference between stamp 0 and that
+version is bounded by condition D3 and listed in "Provenance".
 
-Повторная запись штампа 0 запрещена: смысл штампа в том, что он старше
-измерений, и переписанный штамп этого свойства не имеет.
+Re-recording stamp 0 is forbidden: the point of the stamp is that it predates
+the measurements, and a rewritten stamp does not have that property.
 
-Запуск:  python scripts/stamp0_v1c.py
+Run:  python scripts/stamp0_v1c.py
 """
 from __future__ import annotations
 
@@ -41,22 +43,22 @@ def sha256(p: Path) -> str:
 
 def main() -> int:
     if not SPEC.exists():
-        print("спецификация не найдена: %s" % SPEC, file=sys.stderr)
+        print("spec not found: %s" % SPEC, file=sys.stderr)
         return 1
     OUT.mkdir(parents=True, exist_ok=True)
 
     frozen = OUT / ("experiment-spec-h1-h3.%s.stamp0.md" % VERSION)
     if frozen.exists():
-        print("штамп 0 уже записан: %s" % frozen.name, file=sys.stderr)
-        print("повторная запись запрещена правилом Д1", file=sys.stderr)
+        print("stamp 0 already recorded: %s" % frozen.name, file=sys.stderr)
+        print("re-recording is forbidden by rule D1", file=sys.stderr)
         return 1
     shutil.copy2(SPEC, frozen)
 
     spec_hash = sha256(SPEC)
     size = SPEC.stat().st_size
 
-    # Конфиг штампа 0 содержит конструкцию ступени, а не её параметры: чисел,
-    # которые могут дать измерения V1c-E6, здесь нет по построению.
+    # Stamp 0's config holds the stage's design, not its parameters: by
+    # construction, none of the numbers V1c-E6 measurements could supply appear here.
     cfg = {
         "stage": "V1c",
         "artefact_kind": "штамп 0 (правило Д1), не предрегистрация",
@@ -203,13 +205,13 @@ stamp0_v1c.json {cfg_size} {cfg}
            frozen=frozen.name)
 
     (OUT / "stamp0_sha256.txt").write_text(text, encoding="utf-8")
-    print("штамп 0 записан:")
-    print("  спецификация %s  %d байт  %s" % (VERSION, size, spec_hash))
-    print("  конфиг штампа                %s" % cfg_hash)
-    print("  копия: %s" % frozen)
+    print("stamp 0 recorded:")
+    print("  spec %s  %d bytes  %s" % (VERSION, size, spec_hash))
+    print("  stamp config                 %s" % cfg_hash)
+    print("  copy: %s" % frozen)
     print()
-    print("с этого момента разрешены измерения V1c-E6.1, E6.2 и E6.4;")
-    print("измерение E6.3-C запрещено до заморозки ступени.")
+    print("from this point measurements V1c-E6.1, E6.2 and E6.4 are allowed;")
+    print("measurement E6.3-C is forbidden until the stage is frozen.")
     return 0
 
 

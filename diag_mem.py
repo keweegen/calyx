@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-"""Диагностика TerminatedWorkerError: следим за свободной памятью во время реального run_exp.
+"""Diagnosing TerminatedWorkerError: tracking free memory during a real run_exp.
 
-Родитель запускает дочерний процесс с настоящим run_exp и раз в 0.5 с снимает
-доступную физическую память. Если гипотеза о нехватке памяти верна, минимум
-доступной памяти при n_proc=12 должен приблизиться к нулю, а при малом n_proc — нет.
+The parent launches a child process with the real run_exp and, every 0.5 s, samples
+available physical memory. If the memory-shortage hypothesis is correct, the minimum
+available memory at n_proc=12 should approach zero, while at a small n_proc it should not.
 
-Запуск:  .venv/Scripts/python.exe diag_mem.py <n_run> <n_proc>
+Run:  .venv/Scripts/python.exe diag_mem.py <n_run> <n_proc>
 """
 import sys, time, ctypes, subprocess
 from pathlib import Path

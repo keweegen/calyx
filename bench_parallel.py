@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Стенка по времени на одном реальном условии run_exp: 10 трайлов, 12 воркеров.
+"""Wall-clock timing on one real run_exp condition: 10 trials, 12 workers.
 
-Однопроцессный замер (bench_backend.py) не отвечает на вопрос, который важен на
-практике: прогоны идут в 12 процессов, и там узкое место — пропускная способность
-памяти, а не процессор. Этот скрипт меряет то, что реально стоит прогон.
+The single-process measurement (bench_backend.py) does not answer the question that
+matters in practice: runs go out to 12 processes, and there the bottleneck is memory
+bandwidth, not the CPU. This script measures what a run actually costs.
 
-Запуск:  .venv/Scripts/python.exe bench_parallel.py          (бэкенд из brian_preferences)
-         msvc_run.bat bench_parallel.py                      (то же, но с доступным компилятором)
+Run:  .venv/Scripts/python.exe bench_parallel.py          (backend from brian_preferences)
+         msvc_run.bat bench_parallel.py                      (same, but with a compiler available)
 """
 import sys, time, shutil
 from pathlib import Path
@@ -32,11 +32,11 @@ import importlib.util as _u
 _s = _u.spec_from_file_location("v1a", HERE / "v1a_subcircuit.py")
 _m = _u.module_from_spec(_s); sys.modules["v1a"] = _m; _s.loader.exec_module(_m)
 n_proc = _m.n_proc_by_memory()
-print("воркеров:", n_proc)
+print("workers:", n_proc)
 p = dict(default_params); p["t_run"] = 1000 * ms; p["n_run"] = 10; p["r_poi"] = 20 * Hz
 t0 = time.time()
 run_exp(exp_name="probe", neu_exc=exc, path_res=str(out),
         path_comp=str(REPO / "2023_03_23_completeness_630_final.csv"),
         path_con=str(REPO / "2023_03_23_connectivity_630_final.parquet"),
         params=p, n_proc=n_proc)
-print("стенка на условие (10 трайлов, 12 воркеров): %.0f с" % (time.time() - t0))
+print("wall time per condition (10 trials, 12 workers): %.0f s" % (time.time() - t0))

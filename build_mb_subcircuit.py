@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
-"""Коннектомно-полная подсхема грибовидного тела из FlyWire v630.
+"""Connectome-complete subcircuit of the mushroom body from FlyWire v630.
 
-Отбирает нейроны KC, MBON, DAN и APL по разметке типов [18] (тег v1.1.0,
-материализация 630) плюс проекционные нейроны антеннальной доли (ALPN) как
-источник входа, берёт из коннектома модели [2] **все** рёбра между отобранными
-нейронами и записывает подсхему в том же формате, что читает `model.create_model`.
-Внутри подсхемы не выбрасывается ничего: ни рёбра, ни нейроны выбранных типов.
+Selects KC, MBON, DAN and APL neurons by the type annotations [18] (tag v1.1.0,
+materialization 630) plus antennal lobe projection neurons (ALPN) as the input
+source, takes **all** edges between the selected neurons from the model connectome [2],
+and writes the subcircuit in the same format that `model.create_model` reads.
+Nothing is dropped inside the subcircuit: neither edges nor neurons of the selected types.
 
-Компартменты грибовидного тела. FlyWire их не размечает; карта «тип →
-компартмент» строится из поля `instance` метаданных hemibrain [9], где
-компартмент стоит в скобках после кода типа (`MBON11(y1pedc>a/B)_R`). Латинская
-запись переводится в греческую по правилам transliterate() ниже, результат
-проверяется по закрытому списку компартментов MB_COMPARTMENTS; всё, что в него
-не раскладывается, помечается и в карту не идёт. Для типов с ветвлением
-(`y4>y1y2`, `y1pedc>a/B`, `y4<y1y2`) компартментом считается часть до `>` или
-`<` — дендритное поле MBON и аксонное поле DAN соответственно.
+Mushroom body compartments. FlyWire does not annotate them; the "type →
+compartment" map is built from the `instance` field of the hemibrain metadata [9],
+where the compartment is given in parentheses after the type code (`MBON11(y1pedc>a/B)_R`).
+The Latin notation is converted to Greek by the rules of transliterate() below, and
+the result is checked against the closed list of compartments MB_COMPARTMENTS; anything
+that does not resolve into it is flagged and does not go into the map. For branching
+types (`y4>y1y2`, `y1pedc>a/B`, `y4<y1y2`) the compartment is taken as the part before
+`>` or `<` — the dendritic field of the MBON and the axonal field of the DAN, respectively.
 
-Запуск:  .venv/Scripts/python.exe build_mb_subcircuit.py
-Выходы:  data/mb_subcircuit/    — ID, подсхема в формате модели (вне git)
-         results/mb_subcircuit/ — счётчики, карта компартментов, хэш конфига
+Run:  .venv/Scripts/python.exe build_mb_subcircuit.py
+Outputs:  data/mb_subcircuit/    — IDs, subcircuit in the model's format (outside git)
+          results/mb_subcircuit/ — counts, compartment map, config hash
 """
 from __future__ import annotations
 
@@ -35,42 +35,42 @@ ANN = HERE / "data" / "flywire_annotations"
 OUT_DATA = HERE / "data" / "mb_subcircuit"
 OUT_RES = HERE / "results" / "mb_subcircuit"
 
-# --- конфиг подсхемы: всё, что определяет состав, и ничего больше -------------
+# --- subcircuit config: everything that determines composition, and nothing more -------------
 CONFIG = {
     "substrate": "FlyWire v630 (форк [2], 2023_03_23_*_630_final)",
     "annotations": "flywire_annotations v1.1.0 (df6bb136), Supplemental_file1",
     "compartments_from": "hemibrain meta Supplemental_file4, поле instance",
-    # ядро подсхемы: значения cell_class разметки
+    # core of the subcircuit: cell_class values of the annotation
     "core_cell_class": ["Kenyon_Cell", "MBON", "DAN"],
-    # APL размечен как MBIN; берём его по hemibrain_type, чтобы не втянуть DPM
+    # APL is annotated as MBIN; we take it by hemibrain_type so as not to pull in DPM
     "core_hemibrain_type": ["APL"],
-    # вход: проекционные нейроны антеннальной доли
+    # input: antennal lobe projection neurons
     "input_cell_class": ["ALPN"],
-    # PN включается, если имеет хотя бы столько связей на нейрон ядра
+    # a PN is included if it has at least this many connections onto a core neuron
     "input_min_connectivity_to_core": 1,
-    # обе стороны: подсхема коннектомно-полная, полушария не разделяются
+    # both sides: the subcircuit is connectome-complete, hemispheres are not separated
     "sides": "both",
-    # рёбра: все рёбра коннектома, оба конца которых в подсхеме
+    # edges: all connectome edges with both ends in the subcircuit
     "edges": "all pairs within selection",
 }
 
-# Компартменты грибовидного тела (Li et al. 2020 [9]); pedc — цветоножка.
+# Mushroom body compartments (Li et al. 2020 [9]); pedc is the pedunculus.
 MB_COMPARTMENTS = [
     "γ1", "γ2", "γ3", "γ4", "γ5",
     "β1", "β2", "β′1", "β′2",
     "α1", "α2", "α3", "α′1", "α′2", "α′3",
     "pedc", "calyx",
 ]
-# Значения instance, которые компартментом не являются (имена трактов тел клеток).
+# Instance values that are not a compartment (names of cell-body fiber tracts).
 NOT_A_COMPARTMENT = {"PDL05", "PVL17"}
 
 
 def transliterate(s: str) -> str:
-    """Латинская запись hemibrain в греческую.
+    """Latin hemibrain notation into Greek.
 
-    'y' в гамму только перед цифрой ('calyx' не трогаем); 'B' в бету всегда;
-    'a' в альфу перед цифрой, перед штрихом или сразу после '>' или '/'
-    (в 'y5B'2a' и в 'bilateral' конечная 'a' остаётся собой).
+    'y' becomes gamma only before a digit ('calyx' is left untouched); 'B' becomes
+    beta always; 'a' becomes alpha before a digit, before a prime, or right after
+    '>' or '/' (in 'y5B'2a' and in 'bilateral' the final 'a' remains itself).
     """
     out = []
     for k, ch in enumerate(s):
@@ -93,17 +93,18 @@ _TOK = re.compile(r"(pedc|calyx)|([γβα]′?)((?:\d[a-z]*)+)")
 
 
 def split_compartments(field: str) -> list[str]:
-    """Разложить поле вида 'γ1pedc' или 'α2p3p' на компартменты закрытого списка.
+    """Split a field like 'γ1pedc' or 'α2p3p' into compartments of the closed list.
 
-    Разбор слева направо. Буквы-уточнители ('m', 'p', 'd', 'sc', 'ap', 'ped')
-    отбрасываются; повтор цифры при одной букве — это несколько компартментов
-    ('α2p3p' — дендриты в α2p и α3p, то есть α2 и α3). Суффикс после '_'
-    ('β′2mp_bilateral') относится к нейрону, а не к компартменту, и снимается.
-    Возвращает пустой список, если поле разобрано не полностью или дало
-    компартмент вне MB_COMPARTMENTS: такой тип помечается и в карту не идёт.
+    Parsed left to right. Qualifier letters ('m', 'p', 'd', 'sc', 'ap', 'ped')
+    are dropped; a repeated digit under one letter is several compartments
+    ('α2p3p' — dendrites in α2p and α3p, i.e. α2 and α3). The suffix after '_'
+    ('β′2mp_bilateral') belongs to the neuron, not the compartment, and is
+    stripped. Returns an empty list if the field is not parsed in full or yields
+    a compartment outside MB_COMPARTMENTS: such a type is flagged and does not go
+    into the map.
     """
     field = field.split("_")[0]
-    # 'pedc' и 'calyx' отделяем явно, иначе их съедает суффикс цифры ('γ1pedc')
+    # 'pedc' and 'calyx' are split off explicitly, otherwise the digit suffix eats them ('γ1pedc')
     parts = [p for p in re.split(r"(pedc|calyx)", field) if p]
     out: list[str] = []
     for part in parts:
@@ -125,7 +126,7 @@ def split_compartments(field: str) -> list[str]:
 
 
 def build_compartment_map(hb: pd.DataFrame) -> pd.DataFrame:
-    """Карта 'hemibrain_type в компартменты' из поля instance метаданных [9]."""
+    """Map of 'hemibrain_type to compartments' from the instance field of metadata [9]."""
     m = hb[hb["morphology_type"].fillna("").str.match(r"(MBON|PAM|PPL1|PPL2)")].copy()
     m["par"] = m["instance"].map(
         lambda s: (re.findall(r"\((.*?)\)", s) or [None])[0] if isinstance(s, str) else None
@@ -134,16 +135,16 @@ def build_compartment_map(hb: pd.DataFrame) -> pd.DataFrame:
     for t, sub in m.groupby("morphology_type"):
         vals = sorted({v for v in sub["par"] if isinstance(v, str)})
         if len(vals) > 1:
-            print("   ВНИМАНИЕ: у типа %s несколько вариантов instance: %s" % (t, vals))
+            print("   WARNING: type %s has multiple instance variants: %s" % (t, vals))
         raw = vals[0] if vals else ""
         greek = transliterate(raw) if raw else ""
         field = re.split("[><]", greek)[0] if greek else ""
         if (raw in NOT_A_COMPARTMENT) or not raw:
             comps = []
-            note = "не компартмент (%s)" % (raw or "instance без скобок")
+            note = "not a compartment (%s)" % (raw or "instance without parentheses")
         else:
             comps = split_compartments(field)
-            note = "" if comps else "не разложилось по закрытому списку"
+            note = "" if comps else "did not resolve into the closed list"
         rows.append({
             "hemibrain_type": t,
             "instance_raw": raw,
@@ -156,10 +157,11 @@ def build_compartment_map(hb: pd.DataFrame) -> pd.DataFrame:
 
 
 def write_reconciliation(neurons: pd.DataFrame, hb: pd.DataFrame, cfg_hash: str) -> None:
-    """Сверка счётчиков подсхемы с [8], [30] и [9]. Требование задачи 4.1 драфта.
+    """Reconciliation of subcircuit counts against [8], [30] and [9]. Requirement of draft task 4.1.
 
-    Числа для hemibrain считаются здесь же из его метаданных, а не берутся из
-    текста статьи: так сверка воспроизводима вместе со всем остальным.
+    The hemibrain numbers are computed here from its metadata, not taken from the
+    text of the paper: this way the reconciliation is reproducible together with
+    everything else.
     """
     def hb_n(prefix: tuple[str, ...], side: str | None = None) -> int:
         s = hb[hb.morphology_type.fillna("").str.startswith(prefix)]
@@ -172,58 +174,58 @@ def write_reconciliation(neurons: pd.DataFrame, hb: pd.DataFrame, cfg_hash: str)
     dan = neurons[neurons.mb_role == "DAN"]
     apl = neurons[neurons.mb_role == "APL"]
     lines = [
-        "Сверка счётчиков подсхемы грибовидного тела с литературой",
-        "хэш конфига: %s" % cfg_hash,
+        "Reconciliation of mushroom-body subcircuit counts against the literature",
+        "config hash: %s" % cfg_hash,
         "",
-        "Числа hemibrain посчитаны из Supplemental_file4_hemibrain_meta.csv,",
-        "числа Aso 2014 — из текста [8]/[30] (см. примечания).",
+        "The hemibrain numbers are computed from Supplemental_file4_hemibrain_meta.csv,",
+        "the Aso 2014 numbers are from the text of [8]/[30] (see notes).",
         "",
-        "%-12s %-26s %-26s %s" % ("класс", "FlyWire v630 (наш счёт)", "hemibrain [9] (наш счёт)", "Aso 2014 [8]/[30]"),
+        "%-12s %-26s %-26s %s" % ("class", "FlyWire v630 (our count)", "hemibrain [9] (our count)", "Aso 2014 [8]/[30]"),
         "-" * 100,
         "%-12s %-26s %-26s %s" % (
             "KC",
             "%d (L %d, R %d)" % (len(kc), (kc.side == "left").sum(), (kc.side == "right").sum()),
-            "%d (правое полушарие)" % hb_n(("KC",)),
-            "«∼2000 Kenyon cells» [30]"),
+            "%d (right hemisphere)" % hb_n(("KC",)),
+            "\"∼2000 Kenyon cells\" [30]"),
         "%-12s %-26s %-26s %s" % (
             "MBON",
-            "%d (L %d, R %d), типов %d" % (len(mbon), (mbon.side == "left").sum(),
+            "%d (L %d, R %d), types %d" % (len(mbon), (mbon.side == "left").sum(),
                                            (mbon.side == "right").sum(), mbon.hemibrain_type.nunique()),
-            "%d (R %d), типов %d" % (hb_n(("MBON",)), hb_n(("MBON",), "right"),
+            "%d (R %d), types %d" % (hb_n(("MBON",)), hb_n(("MBON",), "right"),
                                      hb[hb.morphology_type.fillna("").str.startswith("MBON")].morphology_type.nunique()),
-            "34 нейрона 21 типа [30, табл. 1]"),
+            "34 neurons of 21 types [30, table 1]"),
         "%-12s %-26s %-26s %s" % (
             "DAN",
-            "%d (L %d, R %d), типов %d" % (len(dan), (dan.side == "left").sum(),
+            "%d (L %d, R %d), types %d" % (len(dan), (dan.side == "left").sum(),
                                            (dan.side == "right").sum(), dan.hemibrain_type.nunique()),
             "%d (R %d)" % (hb_n(("PAM", "PPL1", "PPL2")), hb_n(("PAM", "PPL1", "PPL2"), "right")),
-            ">100 нейронов 20 типов [8]"),
+            ">100 neurons of 20 types [8]"),
         "%-12s %-26s %-26s %s" % (
             "APL",
-            "%d (по одному на полушарие)" % len(apl),
-            "%d (только правое)" % hb_n(("APL",)),
-            "1 на полушарие [8]"),
+            "%d (one per hemisphere)" % len(apl),
+            "%d (right only)" % hb_n(("APL",)),
+            "1 per hemisphere [8]"),
         "",
-        "Разбор расхождений.",
+        "Discrepancy breakdown.",
         "",
-        "1. KC. Расхождение с hemibrain — примерно +34 % на полушарие; ориентир",
-        "   «∼2000» из [30] ближе к hemibrain, чем к FlyWire. Это разные мухи и разные",
-        "   реконструкции; объяснение расхождения в наших источниках не проверено и",
-        "   остаётся открытым вопросом. Для стенда существенно другое: субстратом",
-        "   служит FlyWire v630, и в нём число KC равно посчитанному здесь, а не",
-        "   литературному ориентиру. Формулировку «~2000 на полушарие» в whitepaper",
-        "   нужно поправить на фактическое число субстрата.",
+        "1. KC. Discrepancy with hemibrain is about +34% per hemisphere; the",
+        "   \"∼2000\" reference from [30] is closer to hemibrain than to FlyWire. These are different flies and different",
+        "   reconstructions; the explanation for the discrepancy is not verified in our sources and",
+        "   remains an open question. What matters for the testbed is different: the substrate",
+        "   is FlyWire v630, and in it the KC count equals the one computed here, not the",
+        "   literature reference. The phrase \"~2000 per hemisphere\" in the whitepaper",
+        "   needs to be corrected to the actual substrate count.",
         "",
-        "2. MBON. «34 нейрона 21 типа» — набор [30] 2014 года. В hemibrain [9] типы",
-        "   MBON22–MBON35 описаны позже, и разметка FlyWire следует номенклатуре [9].",
-        "   Расхождение не ошибка извлечения, а разница наборов; для декодера уровня 1",
-        "   это существенно, потому что валентность в [30] установлена только для",
-        "   типов MBON01–MBON21.",
+        "2. MBON. \"34 neurons of 21 types\" is the [30] 2014 set. In hemibrain [9] the types",
+        "   MBON22–MBON35 are described later, and the FlyWire annotation follows the [9] nomenclature.",
+        "   The discrepancy is not an extraction error but a difference of sets; for the level-1 decoder",
+        "   this matters because valence in [30] is established only for",
+        "   types MBON01–MBON21.",
         "",
-        "3. DAN. Согласие с hemibrain хорошее. «20 типов» из [8] против 25 типов",
-        "   номенклатуры [9]: [9] дробит PAM мельче (PAM01–PAM15).",
+        "3. DAN. Agreement with hemibrain is good. \"20 types\" from [8] versus 25 types",
+        "   in the [9] nomenclature: [9] splits PAM more finely (PAM01–PAM15).",
         "",
-        "4. APL. Полное совпадение: по одному на полушарие.",
+        "4. APL. Full agreement: one per hemisphere.",
     ]
     (OUT_RES / "counts_vs_literature.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -234,23 +236,23 @@ def main() -> int:
 
     cfg_json = json.dumps(CONFIG, ensure_ascii=False, sort_keys=True, indent=2)
     cfg_hash = hashlib.sha256(cfg_json.encode("utf-8")).hexdigest()
-    print("конфиг подсхемы, sha256 = %s" % cfg_hash)
+    print("subcircuit config, sha256 = %s" % cfg_hash)
 
-    print("\n1. разметка типов")
+    print("\n1. type annotations")
     ann = pd.read_csv(ANN / "Supplemental_file1_annotations.tsv", sep="\t", low_memory=False)
     hb = pd.read_csv(ANN / "Supplemental_file4_hemibrain_meta.csv", low_memory=False)
-    print("   аннотаций: %d строк; hemibrain: %d строк" % (len(ann), len(hb)))
+    print("   annotations: %d rows; hemibrain: %d rows" % (len(ann), len(hb)))
 
-    print("\n2. карта компартментов из hemibrain [9]")
+    print("\n2. compartment map from hemibrain [9]")
     cmap = build_compartment_map(hb)
     n_ok = int((cmap.compartments != "").sum())
-    print("   типов: %d, из них с компартментом: %d" % (len(cmap), n_ok))
+    print("   types: %d, of which with a compartment: %d" % (len(cmap), n_ok))
     for _, r in cmap[cmap.compartments == ""].iterrows():
-        print("      без компартмента: %-8s instance=%-8s %s"
+        print("      no compartment: %-8s instance=%-8s %s"
               % (r.hemibrain_type, r.instance_raw, r.note))
     cmap.to_csv(OUT_RES / "compartment_map.tsv", sep="\t", index=False, encoding="utf-8")
 
-    print("\n3. отбор нейронов")
+    print("\n3. neuron selection")
     comp = pd.read_csv(REPO / "2023_03_23_completeness_630_final.csv", index_col=0)
     model_ids = set(comp.index.astype("int64"))
     ann = ann[ann.root_id.isin(model_ids)].copy()
@@ -261,36 +263,37 @@ def main() -> int:
     core["mb_role"] = core.cell_class.where(core.cell_class != "MBIN", "APL")
 
     pn_all = ann[ann.cell_class.isin(CONFIG["input_cell_class"])].copy()
-    print("   ядро: %d нейронов; кандидатов PN: %d" % (len(core), len(pn_all)))
+    print("   core: %d neurons; PN candidates: %d" % (len(core), len(pn_all)))
 
-    print("\n4. рёбра коннектома")
+    print("\n4. connectome edges")
     con = pd.read_parquet(REPO / "2023_03_23_connectivity_630_final.parquet")
     core_ids = set(core.root_id.astype("int64"))
-    # PN оставляем те, что действительно синаптируют на ядро подсхемы
+    # keep only the PN that actually synapse onto the subcircuit core
     to_core = con[con.Postsynaptic_ID.isin(core_ids)]
     pn_hit = to_core.groupby("Presynaptic_ID")["Connectivity"].sum()
     keep_pn = {i for i in pn_all.root_id.astype("int64")
                if pn_hit.get(i, 0) >= CONFIG["input_min_connectivity_to_core"]}
     pn = pn_all[pn_all.root_id.isin(keep_pn)].copy()
     pn["mb_role"] = "PN"
-    print("   PN со связью на ядро: %d из %d" % (len(pn), len(pn_all)))
+    print("   PN with a connection to the core: %d of %d" % (len(pn), len(pn_all)))
 
     sel = pd.concat([core, pn], ignore_index=True)
     sel_ids = set(sel.root_id.astype("int64"))
     edges = con[con.Presynaptic_ID.isin(sel_ids) & con.Postsynaptic_ID.isin(sel_ids)].copy()
-    print("   нейронов в подсхеме: %d; рёбер: %d; синапсов: %d"
+    print("   neurons in subcircuit: %d; edges: %d; synapses: %d"
           % (len(sel), len(edges), int(edges.Connectivity.sum())))
 
-    print("\n5. компартменты нейронов")
+    print("\n5. neuron compartments")
     cm = {k: (v if isinstance(v, str) else "")
           for k, v in cmap.set_index("hemibrain_type")["compartments"].to_dict().items()}
 
     def compartments_of(t) -> str:
-        """Компартменты типа. Составной тип FlyWire ('MBON25,MBON34') — объединение.
+        """Compartments of a type. A compound FlyWire type ('MBON25,MBON34') is a union.
 
-        Составной ярлык означает, что разметка не развела два hemibrain-типа;
-        объединение компартментов — единственное, что из этого следует, и
-        такие нейроны помечены в neurons.csv составным типом.
+        A compound label means the annotation did not separate two hemibrain
+        types; taking the union of compartments is the only thing that follows
+        from this, and such neurons are marked in neurons.csv with the compound
+        type.
         """
         if not isinstance(t, str) or not t:
             return ""
@@ -305,14 +308,14 @@ def main() -> int:
 
     sel["compartment"] = sel.hemibrain_type.map(compartments_of)
 
-    print("\n6. запись")
+    print("\n6. writing output")
     cols = ["root_id", "mb_role", "cell_class", "cell_sub_class", "hemibrain_type",
             "compartment", "side", "top_nt", "top_nt_conf", "ito_lee_hemilineage"]
     neurons = (sel[cols].sort_values(["mb_role", "hemibrain_type", "root_id"])
                .reset_index(drop=True))
     neurons.to_csv(OUT_DATA / "neurons.csv", index=False, encoding="utf-8")
 
-    # подсхема в формате, который читает model.create_model
+    # subcircuit in the format that model.create_model reads
     sub_comp = comp.loc[sorted(sel_ids)].copy()
     sub_comp.to_csv(OUT_DATA / "completeness.csv", encoding="utf-8")
     idx = {fid: k for k, fid in enumerate(sub_comp.index.astype("int64"))}
@@ -323,7 +326,7 @@ def main() -> int:
                .reset_index(drop=True))
     sub_con.to_parquet(OUT_DATA / "connectivity.parquet", compression="brotli")
 
-    # счётчики
+    # counts
     counts = (neurons.groupby(["mb_role", "hemibrain_type", "side"], dropna=False)
               .size().rename("n").reset_index())
     counts.to_csv(OUT_RES / "type_counts.tsv", sep="\t", index=False, encoding="utf-8")
@@ -334,11 +337,11 @@ def main() -> int:
         sub = neurons[neurons.mb_role == role]
         no_t = int(sub.hemibrain_type.isna().sum())
         no_c = int((sub.compartment == "").sum())
-        print("   %-4s без типа hemibrain: %d; без компартмента: %d из %d"
+        print("   %-4s without hemibrain type: %d; without compartment: %d of %d"
               % (role, no_t, no_c, len(sub)))
         bad = sub[sub.compartment == ""].hemibrain_type.value_counts(dropna=False)
         for t, n in bad.items():
-            print("        %s: %d" % ("<без типа>" if pd.isna(t) else t, n))
+            print("        %s: %d" % ("<no type>" if pd.isna(t) else t, n))
 
     stats = {
         "config_sha256": cfg_hash,
@@ -364,8 +367,8 @@ def main() -> int:
 
     write_reconciliation(neurons, hb, cfg_hash)
 
-    print("\nкомпартменты в подсхеме: %s" % ", ".join(stats["compartments"]))
-    print("готово: data/mb_subcircuit/, results/mb_subcircuit/")
+    print("\ncompartments in subcircuit: %s" % ", ".join(stats["compartments"]))
+    print("done: data/mb_subcircuit/, results/mb_subcircuit/")
     return 0
 
 

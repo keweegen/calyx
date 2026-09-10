@@ -1,34 +1,34 @@
 # -*- coding: utf-8 -*-
-"""Ступень V1c: предпрогонные проверки, некритериальные выходы, исход.
+"""V1c stage: pre-run checks, non-criterion outputs, outcome.
 
-Что здесь. Библиотека ступени V1c (спецификация v0.17, хэш 636c49968a0866bd,
-разделы 3з и 3и). Прогонщик - run_v1c_grid.py; здесь то, что он вызывает.
+What this is. The V1c stage library (spec v0.17, hash 636c49968a0866bd,
+sections 3з and 3и). The runner is run_v1c_grid.py; this is what it calls.
 
-Три предпрогонные проверки (V1c-E7.1, «перед первой точкой прогона»):
+Three pre-run checks (V1c-E7.1, "before the first run point"):
 
-  тест соответствия      test_spec_conformance.py целиком, унаследованный
-                         пункт V1b'-0;
-  таблица детекторов     пересчитывается из весов, загруженных ТЕМ ЖЕ
-                         загрузчиком, которым пользуется симулятор, то есть
-                         снимается с рёбер собранной сети Brian 2, а не
-                         вычисляется по таблице связей заново;
-  структурный тест       на каждом узле s_k сумма весов рёбер KC->MBON равна
-  масштабирования        s_k, умноженному на сумму при s = 1, с относительным
-                         допуском 1e-12; сумма весов всех прочих рёбер равна
-                         сумме при s = 1 точно.
+  conformance test        test_spec_conformance.py in full, the inherited
+                          V1b'-0 item;
+  detector table          recomputed from weights loaded by THE SAME
+                          loader the simulator uses, i.e. taken from the
+                          edges of the assembled Brian 2 network, not
+                          computed from the connectivity table again;
+  structural scaling      at every node s_k the sum of KC->MBON edge
+  test                    weights equals s_k times the sum at s = 1, with a
+                          relative tolerance of 1e-12; the sum of all other
+                          edge weights equals the sum at s = 1 exactly.
 
-Провал любой из трёх - исход NOT-TESTABLE по основанию «ошибка исполнения»,
-и прогон не начинается.
+Failure of any of the three gives outcome NOT-TESTABLE on the ground
+"execution error", and the run does not start.
 
-Два некритериальных выхода вычисляются здесь же: карта расстояния до порога
-(V1c-E7.2) и проверка воспроизведения на узле s = 1 (V1c-E7.3). Ни один из них
-не участвует ни в одном критерии; их провал закрывает ступень NOT-TESTABLE,
-а не FAIL.
+Two non-criterion outputs are computed here as well: the distance-to-threshold
+map (V1c-E7.2) and the reproduction check at node s = 1 (V1c-E7.3). Neither
+participates in any criterion; their failure closes the stage NOT-TESTABLE,
+not FAIL.
 
-Канонические узлы сетки - десятичные строки конфига, а не результат
-перевычисления формул во время исполнения: граничные узлы округлены вниз, и
-перевычисление вернуло бы значения, при которых строгость неравенства условия
-(5) зависела бы от порядка арифметики.
+The canonical grid nodes are the decimal strings from the config, not the
+result of recomputing the formulas at run time: the boundary nodes are
+rounded down, and recomputing them would return values for which the
+strictness of inequality (5) would depend on arithmetic order.
 """
 from __future__ import annotations
 
@@ -50,48 +50,49 @@ WEIGHTS = OUT / "weights_kc_mbon.json"
 
 
 class NotTestable(RuntimeError):
-    """Ошибка исполнения: ступень закрывается исходом NOT-TESTABLE."""
+    """Execution error: the stage closes with outcome NOT-TESTABLE."""
 
 
-# --- конфиг ступени ----------------------------------------------------------
+# --- stage config -------------------------------------------------------------
 def config() -> dict:
     return json.loads(CONFIG.read_text(encoding="utf-8"))
 
 
 def nodes() -> list[str]:
-    """Пять канонических узлов сетки по s, строками (V1c-E3.2).
+    """The five canonical grid nodes over s, as strings (V1c-E3.2).
 
-    Читаются как строки и во время исполнения не перевычисляются. Порядок -
-    порядок конфига, он же порядок возрастания.
+    Read as strings and not recomputed at run time. The order is the
+    config's order, which is also ascending order.
     """
     ns = list(config()["grid_s"]["nodes_canonical"])
     if ns != ["1", "1.6836", "1.7783", "3.1623", "5.3875"]:
-        raise NotTestable("узлы сетки конфига не совпадают со спецификацией: %r" % ns)
+        raise NotTestable("config grid nodes do not match the specification: %r" % ns)
     return ns
 
 
 def candidates() -> list[dict]:
-    """57 кандидатов V1b' - точки, прошедшие ограничение по доле (V1c-E3.3)."""
+    """The 57 V1b' candidates - points that passed the share constraint (V1c-E3.3)."""
     rm = json.loads((PRIME / "report_map.json").read_text(encoding="utf-8"))
     cs = rm["candidates"]
     if len(cs) != 57:
-        raise NotTestable("кандидатов V1b' не 57, а %d" % len(cs))
+        raise NotTestable("V1b' candidates are not 57, but %d" % len(cs))
     return cs
 
 
 def grid_3d() -> list[tuple[int, dict, str]]:
-    """285 трёхмерных точек: (индекс кандидата, кандидат, узел s).
+    """285 three-dimensional points: (candidate index, candidate, node s).
 
-    Порядок объявлен до прогона: СНАЧАЛА все 57 кандидатов на узле s = 1, потом
-    остальные 228 точек внешним циклом по кандидату и внутренним по четырём
-    оставшимся узлам. Основание - V1c-E7.3: она останавливает прогон на первом
-    расхождении с V1b', и блок s = 1 закрывает все 57 сверок примерно за 42
-    минуты на восьми шардах, а не через три часа.
+    The order is declared before the run: FIRST all 57 candidates at node
+    s = 1, then the remaining 228 points by an outer loop over candidate and
+    an inner loop over the four remaining nodes. The reason is V1c-E7.3: it
+    stops the run at the first divergence from V1b', and the s = 1 block
+    closes all 57 checks in about 42 minutes on eight shards, rather than
+    three hours.
 
-    На числа порядок не влияет: сеть строится заново на каждую точку и
-    пересеивается на каждую пробу, а кэш cython у каждого шарда свой. Эмпирика -
-    общие узлы стадий V1b', посчитанные независимыми процессами, совпали
-    побитово.
+    Order does not affect the numbers: the network is rebuilt for every
+    point and reseeded for every trial, and each shard has its own cython
+    cache. Empirically, the shared V1b' stage nodes, computed by independent
+    processes, matched bitwise.
     """
     ns = nodes()
     cs = list(enumerate(candidates()))
@@ -100,26 +101,29 @@ def grid_3d() -> list[tuple[int, dict, str]]:
     return head + tail
 
 
-# --- веса собранной сети -----------------------------------------------------
+# --- weights of the assembled network ------------------------------------------
 def loaded_kc_mbon_weights(neurons, con, s: str = "1") -> dict:
-    """Веса рёбер KC->MBON, снятые с собранной сети Brian 2.
+    """KC->MBON edge weights, taken from the assembled Brian 2 network.
 
-    Именно «тем же загрузчиком, которым пользуется симулятор»: сеть строится
-    функцией build() ступени, и веса читаются с объекта Synapses, а не
-    вычисляются по таблице связей повторно. Возвращает суммы по классам рёбер
-    и максимум одиночного ребра на каждую клетку MBON, в мВ.
+    Specifically "the same loader the simulator uses": the network is built
+    by the stage's build() function, and the weights are read off the
+    Synapses object rather than recomputed from the connectivity table.
+    Returns the sums by edge class and the maximum single edge for each
+    MBON cell, in mV.
     """
     import v1b_subcircuit as V
     from brian2 import mV
     from brian2.utils.logger import BrianLogger
 
-    # Проверка строит сеть по разу на узел и не запускает её. Brian при сборке
-    # мусора считает такие объекты «не включёнными в сеть», хотя они были в ней:
-    # предупреждение здесь ложное и глушится по имени, а не целиком.
+    # The check builds the network once per node and does not run it. During
+    # garbage collection Brian considers such objects "not included in the
+    # network", even though they were: the warning here is a false positive
+    # and is suppressed by name, not wholesale.
     BrianLogger.suppress_name("unused_brian_object")
 
-    # торможение берётся ненулевым, иначе «сумма весов прочих рёбер» на
-    # синапсах APL была бы тождественным нулём и о неизменности не сообщала бы
+    # inhibition is taken nonzero, otherwise the "sum of other edge weights"
+    # on APL synapses would be identically zero and would say nothing about
+    # invariance
     net, _, core_ids, _ = V.build(
         neurons, con, pn_kc_scale=1.0, g_apl=V.g_ref_value(), dan_mask=True,
         graded_apl=True, rates=None, kc_mbon_scale=float(s))
@@ -137,8 +141,8 @@ def loaded_kc_mbon_weights(neurons, con, s: str = "1") -> dict:
         ww = w[sel][post[sel] == m]
         w_max[m] = float(ww.max())
         n_edges[m] = int(len(ww))
-    # рёбра входа и выхода градуального узла - тоже «прочие рёбра»: ручка s
-    # обязана не трогать и их
+    # the input and output edges of the graded node are "other edges" too:
+    # the s knob must not touch them either
     w_apl = 0.0
     n_apl = 0
     for name in ("apl_in", "apl_out"):
@@ -156,30 +160,31 @@ def loaded_kc_mbon_weights(neurons, con, s: str = "1") -> dict:
             "w_max_mV": w_max, "n_edges_by_mbon": n_edges}
 
 
-# --- проверка 1: согласованность таблицы детекторов (V1c-E7.1) ---------------
+# --- check 1: detector table consistency (V1c-E7.1) --------------------------
 def check_detector_table(neurons, con) -> dict:
-    """Таблица детекторов пересчитывается из весов собранной сети.
+    """The detector table is recomputed from the assembled network's weights.
 
-    Сверяются: A и θ - из констант модели; w_max(m) на каждую клетку с
-    относительным допуском 1e-9; класс каждой клетки на каждом узле - точно.
-    Появление детектора среди типов T38 означало бы нарушение условия (5).
+    Checked: A and θ - against the model constants; w_max(m) for each cell
+    with a relative tolerance of 1e-9; each cell's class at each node -
+    exactly. A detector appearing among the T38 types would mean condition
+    (5) is violated.
     """
     from model import default_params as dp
 
     tab = json.loads(DETECTORS.read_text(encoding="utf-8"))
     ns = nodes()
     if list(tab["nodes"]) != ns:
-        raise NotTestable("узлы таблицы детекторов не совпадают с конфигом")
+        raise NotTestable("detector table nodes do not match the config")
 
     rho = float(dp["t_mbr"] / dp["tau"])
     a_model = (1.0 / (rho - 1.0)) * (rho ** (-1.0 / (rho - 1.0))
                                      - rho ** (-rho / (rho - 1.0)))
     theta_model = float((dp["v_th"] - dp["v_0"]) / (0.001 * 1.0))
     if abs(a_model - tab["A"]) > 1e-12:
-        raise NotTestable("A таблицы %.15g против A констант модели %.15g"
+        raise NotTestable("table A %.15g vs model-constant A %.15g"
                           % (tab["A"], a_model))
     if abs(theta_model - tab["theta_mV"]) > 1e-12:
-        raise NotTestable("θ таблицы %.15g против θ констант модели %.15g"
+        raise NotTestable("table θ %.15g vs model-constant θ %.15g"
                           % (tab["theta_mV"], theta_model))
     a, theta = tab["A"], tab["theta_mV"]
 
@@ -188,33 +193,33 @@ def check_detector_table(neurons, con) -> dict:
     cells = {int(c["mbon_id"]): c for c in tab["cells"]}
     n_with_input = sum(1 for c in tab["cells"] if not c["no_kc_input"])
     if len(w_max) != n_with_input:
-        raise NotTestable("клеток MBON с входом KC на сети %d, в таблице %d"
+        raise NotTestable("MBON cells with KC input in the network %d, in the table %d"
                           % (len(w_max), n_with_input))
 
     for m, c in cells.items():
         want = float(c["w_max_mV"])
         if c["no_kc_input"]:
             if m in w_max:
-                raise NotTestable("клетка %d объявлена без входа KC, но на сети "
-                                  "у неё %d рёбер" % (m, got["n_edges_by_mbon"][m]))
+                raise NotTestable("cell %d is declared with no KC input, but in the "
+                                  "network it has %d edges" % (m, got["n_edges_by_mbon"][m]))
             continue
         if m not in w_max:
-            raise NotTestable("клетка %d есть в таблице, но не на сети" % m)
+            raise NotTestable("cell %d is in the table but not in the network" % m)
         if abs(w_max[m] - want) > 1e-9 * max(abs(want), 1e-30):
-            raise NotTestable("w_max клетки %d: сеть %.15g, таблица %.15g"
+            raise NotTestable("w_max of cell %d: network %.15g, table %.15g"
                               % (m, w_max[m], want))
 
-    # класс каждой клетки на каждом узле - точно
+    # each cell's class at each node - exactly
     for s in ns:
         want = sorted(int(d["mbon_id"]) for d in tab["by_node"][s]["detectors"])
         have = sorted(m for m, wm in w_max.items() if float(s) * a * wm > theta)
         if have != want:
-            raise NotTestable("детекторы на узле %s: сеть %r, таблица %r"
+            raise NotTestable("detectors at node %s: network %r, table %r"
                               % (s, have, want))
         in_t38 = [m for m in have if cells[m]["in_T38"]]
         if in_t38:
-            raise NotTestable("на узле %s детектор среди типов T38: %r — "
-                              "условие (5) нарушено" % (s, in_t38))
+            raise NotTestable("at node %s a detector among T38 types: %r - "
+                              "condition (5) violated" % (s, in_t38))
     return {"check": "V1c-E7.1, согласованность таблицы детекторов",
             "status": "пройдена", "A": a, "theta_mV": theta,
             "n_mbon_in_table": len(cells), "n_mbon_with_kc_input": len(w_max),
@@ -223,13 +228,14 @@ def check_detector_table(neurons, con) -> dict:
             "detectors_in_T38_any_node": 0}
 
 
-# --- проверка 2: структурный тест масштабирования (V1c-E7.1) -----------------
+# --- check 2: structural scaling test (V1c-E7.1) ------------------------------
 def check_structural_scaling(neurons, con) -> dict:
-    """Сумма весов KC->MBON равна s_k * сумме при s = 1; прочие - точно равны.
+    """Sum of KC->MBON weights equals s_k * the sum at s = 1; others are exactly equal.
 
-    Допуск на масштабируемую сумму - относительный 1e-12; на неизменяемую -
-    точное равенство. Проверка идёт по весам собранной сети: она отвечает на
-    вопрос, видит ли симулятор те веса, по которым вычислена граница s_max.
+    The tolerance on the scaled sum is a relative 1e-12; on the invariant
+    sum, exact equality. The check runs over the assembled network's
+    weights: it answers whether the simulator sees the same weights from
+    which the s_max bound was computed.
     """
     base = loaded_kc_mbon_weights(neurons, con, "1")
     rows = []
@@ -238,16 +244,16 @@ def check_structural_scaling(neurons, con) -> dict:
         want = float(s) * base["sum_kc_mbon_mV"]
         rel = abs(got["sum_kc_mbon_mV"] - want) / max(abs(want), 1e-30)
         if rel > 1e-12:
-            raise NotTestable("узел %s: сумма KC->MBON %.17g, ожидается %.17g, "
-                              "относительное расхождение %.3g" % (s, got["sum_kc_mbon_mV"],
+            raise NotTestable("node %s: sum KC->MBON %.17g, expected %.17g, "
+                              "relative discrepancy %.3g" % (s, got["sum_kc_mbon_mV"],
                                                                   want, rel))
         if got["sum_other_mV"] != base["sum_other_mV"]:
-            raise NotTestable("узел %s: сумма весов прочих рёбер изменилась: "
-                              "%.17g против %.17g" % (s, got["sum_other_mV"],
+            raise NotTestable("node %s: sum of weights of other edges changed: "
+                              "%.17g vs %.17g" % (s, got["sum_other_mV"],
                                                       base["sum_other_mV"]))
         if got["n_edges_kc_mbon"] != base["n_edges_kc_mbon"] \
                 or got["n_edges_other"] != base["n_edges_other"]:
-            raise NotTestable("узел %s: изменилось число рёбер" % s)
+            raise NotTestable("node %s: edge count changed" % s)
         rows.append({"node": s, "sum_kc_mbon_mV": got["sum_kc_mbon_mV"],
                      "rel_error": rel, "sum_other_mV": got["sum_other_mV"]})
     return {"check": "V1c-E7.1, структурный тест масштабирования",
@@ -257,13 +263,13 @@ def check_structural_scaling(neurons, con) -> dict:
             "n_edges_other": base["n_edges_other"], "by_node": rows}
 
 
-# --- проверка 3: тест соответствия кода спецификации (V1b'-0) ---------------
+# --- check 3: spec-conformance test of the code (V1b'-0) ---------------------
 def check_conformance() -> dict:
     r = subprocess.run([sys.executable, str(HERE / "test_spec_conformance.py")],
                        capture_output=True, text=True, encoding="utf-8",
                        errors="replace")
     if r.returncode != 0:
-        raise NotTestable("тест соответствия кода спецификации провален:\n%s"
+        raise NotTestable("the code-to-specification conformance test failed:\n%s"
                           % r.stdout[-3000:])
     tail = [l for l in r.stdout.splitlines() if l.startswith("все ")]
     return {"check": "V1b'-0, тест соответствия кода спецификации",
@@ -271,42 +277,43 @@ def check_conformance() -> dict:
 
 
 def check_run_plan() -> dict:
-    """План прогона существует, совпадает со своим хэшем и покрывает сетку.
+    """The run plan exists, matches its own hash, and covers the grid.
 
-    План объявляет порядок 285 точек и назначение шардов ДО запуска. Проверка
-    существует потому, что «объявлено до прогона» обязано быть механически
-    проверяемым: иначе порядок можно переписать задним числом, а расхождение
-    плана с сеткой оставило бы часть точек непосчитанной, и исход был бы вынесен
-    по неполной сетке.
+    The plan declares the order of the 285 points and the shard assignment
+    BEFORE the run starts. This check exists because "declared before the
+    run" must be mechanically verifiable: otherwise the order could be
+    rewritten after the fact, and a mismatch between the plan and the grid
+    would leave part of the points uncomputed, with the outcome then being
+    decided on an incomplete grid.
     """
     import hashlib
 
     p = OUT / "run_plan.json"
     h = OUT / "run_plan_sha256.txt"
     if not (p.exists() and h.exists()):
-        raise NotTestable("план прогона или его хэш не записаны: запустите "
+        raise NotTestable("the run plan or its hash is not recorded: run "
                           "run_v1c_grid.py --plan")
     want = [l.split()[-1] for l in h.read_text(encoding="utf-8").splitlines()
             if l.startswith("run_plan.json")]
     got = hashlib.sha256(p.read_bytes()).hexdigest()
     if not want or got != want[0]:
-        raise NotTestable("план прогона не совпадает со своим хэшем: %s против %s"
+        raise NotTestable("the run plan does not match its own hash: %s vs %s"
                           % (got[:16], (want or ["—"])[0][:16]))
     plan = json.loads(p.read_text(encoding="utf-8"))
     grid = [(i, s) for i, _, s in grid_3d()]
     got_pts = [(e["cand_idx"], e["s_node"]) for e in plan["plan"]]
     if got_pts != grid:
-        raise NotTestable("порядок плана не совпадает с сеткой ступени: %d точек "
-                          "плана против %d точек сетки" % (len(got_pts), len(grid)))
+        raise NotTestable("the plan order does not match the stage grid: %d plan "
+                          "points vs %d grid points" % (len(got_pts), len(grid)))
     if len(set(got_pts)) != len(grid):
-        raise NotTestable("в плане есть повторяющиеся точки")
+        raise NotTestable("the plan has duplicate points")
     per = {}
     for e in plan["plan"]:
         per.setdefault(e["shard"], set()).add(e["s_node"])
     missing = {k: sorted(set(nodes()) - v) for k, v in per.items() if len(v) < 5}
     if missing:
-        raise NotTestable("шардам не хватает узлов: %r — падение шарда потеряло "
-                          "бы целый узел сетки" % missing)
+        raise NotTestable("shards are missing nodes: %r - losing a shard would "
+                          "lose an entire grid node" % missing)
     return {"check": "план прогона объявлен до запуска и покрывает сетку",
             "status": "пройдена", "sha256_prefix": got[:16],
             "n_points": len(got_pts), "n_shards": plan["n_shards"],
@@ -314,19 +321,19 @@ def check_run_plan() -> dict:
 
 
 def preflight(neurons, con, *, verbose: bool = True) -> dict:
-    """Все проверки перед первой точкой прогона. Провал - NotTestable."""
+    """All checks before the first run point. Failure - NotTestable."""
     res = [check_conformance(),
            check_run_plan(),
            check_detector_table(neurons, con),
            check_structural_scaling(neurons, con)]
     if verbose:
         for r in res:
-            print("предпрогонная проверка: %s — %s" % (r["check"], r["status"]),
+            print("pre-run check: %s — %s" % (r["check"], r["status"]),
                   flush=True)
     return {"preflight": res}
 
 
-# --- некритериальный выход V1c-E7.2: карта расстояния до порога -------------
+# --- non-criterion output V1c-E7.2: distance-to-threshold map ----------------
 def _mbon_index(neurons, core_ids) -> tuple[np.ndarray, list[int], list[str]]:
     role = dict(zip(neurons.root_id, neurons.mb_role))
     typ = dict(zip(neurons.root_id,
@@ -338,15 +345,17 @@ def _mbon_index(neurons, core_ids) -> tuple[np.ndarray, list[int], list[str]]:
 
 def threshold_rows(by_odor: dict, neurons, *, cand_idx: int, cand: dict,
                    s_node: str, panel: str, run: str = "cal") -> pd.DataFrame:
-    """Строки карты расстояния до порога: клетка x запах x проба (V1c-E7.2).
+    """Rows of the distance-to-threshold map: cell x odor x trial (V1c-E7.2).
 
         d = v_th − max_t v(t),
 
-    максимум по всем шагам симулятора внутри окна, v читается до сброса. d = 0
-    тогда и только тогда, когда клетка дала спайк в этом окне; поэтому нулю
-    приравнивается измеренное значение, а не отбрасывается знак.
+    the maximum over all simulator steps inside the window, v read before
+    reset. d = 0 if and only if the cell spiked in that window; hence the
+    measured value is set equal to zero rather than having its sign
+    dropped.
 
-    Временные трассы v не сохраняются, агрегаций в первичном артефакте нет.
+    The v time traces are not saved; there are no aggregations in the
+    primary artifact.
     """
     from model import default_params as dp
     v_th = float(dp["v_th"] / (0.001 * 1.0))
@@ -359,10 +368,10 @@ def threshold_rows(by_odor: dict, neurons, *, cand_idx: int, cand: dict,
     frames = []
     for odor, res in by_odor.items():
         if "vmax_mV" not in res:
-            raise NotTestable("прогон запаха %r выполнен без наблюдателя vmax: "
-                              "карта V1c-E7.2 не может быть записана" % odor)
-        vm = res["vmax_mV"][mask]                 # клетки x пробы
-        sp = res["counts"][mask] > 0              # спайк в окне предъявления
+            raise NotTestable("the run for odor %r was done without the vmax observer: "
+                              "the V1c-E7.2 map cannot be recorded" % odor)
+        vm = res["vmax_mV"][mask]                 # cells x trials
+        sp = res["counts"][mask] > 0              # spike within the presentation window
         n_trials = vm.shape[1]
         d = np.where(sp, 0.0, np.maximum(0.0, v_th - vm)).astype(np.float32)
         frames.append(pd.DataFrame({
@@ -381,19 +390,20 @@ def threshold_rows(by_odor: dict, neurons, *, cand_idx: int, cand: dict,
             "no_kc_input": np.repeat(
                 np.array([i in no_kc for i in ids], dtype=bool), n_trials),
         }))
-    # Строковые столбцы остаются строками, а не категориями: у точек разные
-    # узлы s, склейка кадров с несовпадающими наборами категорий молча даёт
-    # object, и тип столбца в артефакте зависел бы от порядка склейки. Parquet
-    # словарное кодирование делает сам.
+    # String columns stay strings, not categories: points have different s
+    # nodes, and concatenating frames with mismatched category sets silently
+    # yields object, and the artifact's column type would depend on
+    # concatenation order. Parquet does dictionary encoding on its own.
     return pd.concat(frames, ignore_index=True)
 
 
 def zero_without_spike(by_odor: dict, neurons) -> int:
-    """Число предъявлений MBON, где измеренное v_th - vmax <= 0 без спайка.
+    """Number of MBON presentations where measured v_th - vmax <= 0 without a spike.
 
-    Мера этого события нулевая: порог строгий (v > v_th), поэтому равенство пика
-    порогу спайка не даёт, но и расстояния не оставляет. Величина печатается как
-    проверка исполнения с объявленным до прогона ожиданием 0; она не критерий.
+    The measure of this event is zero: the threshold is strict (v > v_th),
+    so a peak equal to the threshold does not produce a spike, yet leaves no
+    distance either. The value is printed as an execution check with an
+    expectation of 0 declared before the run; it is not a criterion.
     """
     from model import default_params as dp
     v_th = float(dp["v_th"] / (0.001 * 1.0))
@@ -413,10 +423,11 @@ def _cells_without_kc_input() -> list[int]:
 
 
 def threshold_summary(df: pd.DataFrame) -> dict:
-    """Сводка карты: квантили по предъявлениям и медианы по типам T38.
+    """Map summary: quantiles over presentations and medians over T38 types.
 
-    Вычисляется из первичного артефакта и перевычисляема из него: сводка не
-    заменяет карту и в критериях не участвует.
+    Computed from the primary artifact and recomputable from it: the
+    summary does not replace the map and does not participate in any
+    criterion.
     """
     import v1b_subcircuit as V
 
@@ -424,10 +435,11 @@ def threshold_summary(df: pd.DataFrame) -> dict:
     per_cell = g.agg(min="min", q10=lambda x: float(np.quantile(x, 0.10)),
                      median="median",
                      q90=lambda x: float(np.quantile(x, 0.90)), max="max")
-    # «доля предъявлений с d = 0» считается по самому d, а не по признаку
-    # спайка: величины тождественны по построению, но спецификация называет
-    # именно d, и совпадение этих двух подсчётов проверяется отдельно
-    # счётчиком zero_without_spike с объявленным ожиданием 0
+    # "the share of presentations with d = 0" is computed from d itself, not
+    # from the spike flag: the two quantities are identical by construction,
+    # but the spec names d specifically, and the agreement between the two
+    # counts is checked separately by the zero_without_spike counter, with
+    # an expectation of 0 declared beforehand
     per_cell["frac_zero"] = df.assign(_z=(df["d_peak_mV"] == 0)).groupby(
         ["cand_idx", "s_node", "mbon_id"], observed=True)["_z"].mean()
     per_cell = per_cell.reset_index()
@@ -447,7 +459,7 @@ def threshold_summary(df: pd.DataFrame) -> dict:
             "per_T38_type": by_type.to_dict(orient="records")}
 
 
-# --- некритериальный выход V1c-E7.3: воспроизведение на узле s = 1 ----------
+# --- non-criterion output V1c-E7.3: reproduction at node s = 1 ---------------
 def _prime_calibration() -> dict:
     out = {}
     for stage in (1, 2):
@@ -464,7 +476,7 @@ def _prime_candidates() -> dict:
 
 
 def _same(a, b) -> bool:
-    """Побитовое равенство: для float - равенство представлений, NaN = NaN."""
+    """Bitwise equality: for float - equality of representations, NaN = NaN."""
     if isinstance(a, float) and isinstance(b, float):
         if math.isnan(a) and math.isnan(b):
             return True
@@ -477,23 +489,24 @@ def _same(a, b) -> bool:
 
 
 def as_written(pt: dict) -> dict:
-    """Точка в том виде, в каком её пишет шард.
+    """The point in the form the shard writes it.
 
-    V1c-E7.3 требует равенства представлений, а не равенства объектов в памяти,
-    поэтому сверка идёт по значениям, прошедшим через тот же json.dumps, каким
-    шард пишет свой файл, и обратную загрузку.
+    V1c-E7.3 requires equality of representations, not equality of objects
+    in memory, so the check runs over values that have gone through the
+    same json.dumps the shard uses to write its file, and back through
+    loading.
     """
     return json.loads(json.dumps(pt, ensure_ascii=False))
 
 
 def reproduction_check(pt: dict) -> list[str]:
-    """Сверка точки узла s = 1 с артефактами V1b'. Возвращает список расхождений.
+    """Check the node s = 1 point against the V1b' artifacts. Returns a list of discrepancies.
 
-    Сравнивается по фактической схеме артефактов V1b' (V1c-E7.3): из карт
-    калибровки - f_mean, f_max, f_by_odor, s_ab, s_apbp, s_g; из report_map -
-    R_t, MD, min_R_t, max_R_t, violated. Допуск побитовый: умножение веса на
-    s = 1 в арифметике IEEE тождественно, поэтому более слабый допуск лишь
-    скрыл бы недетерминизм.
+    Compared against the actual schema of the V1b' artifacts (V1c-E7.3):
+    from the calibration maps - f_mean, f_max, f_by_odor, s_ab, s_apbp, s_g;
+    from report_map - R_t, MD, min_R_t, max_R_t, violated. The tolerance is
+    bitwise: multiplying a weight by s = 1 is an identity in IEEE
+    arithmetic, so a weaker tolerance would only hide nondeterminism.
     """
     pt = as_written(pt)
     key = (repr(pt["pn_kc_scale"]), repr(pt["g_apl_rel"]))
@@ -543,16 +556,16 @@ def _violated(m: dict) -> list[str]:
                             ("V1b-3.5", m["md_ok"])) if not ok]
 
 
-# --- сигнал аварийной остановки ----------------------------------------------
+# --- halt signal ---------------------------------------------------------------
 HALT = OUT / "HALT.json"
 
 
 def halt(reason: str, detail) -> None:
-    """Записать сигнал остановки: шарды проверяют его перед каждой точкой.
+    """Write the halt signal: shards check it before every point.
 
-    V1c-E7.3 говорит «прогон останавливается на первом обнаруженном
-    расхождении». При восьми независимых процессах остановить можно только свой
-    шард, поэтому первый обнаруживший пишет сигнал, а остальные его читают.
+    V1c-E7.3 says "the run stops at the first detected discrepancy". With
+    eight independent processes, each can only stop its own shard, so the
+    first one to detect it writes the signal, and the rest read it.
     """
     OUT.mkdir(parents=True, exist_ok=True)
     if not HALT.exists():
@@ -566,27 +579,31 @@ def halted() -> dict | None:
     return json.loads(HALT.read_text(encoding="utf-8")) if HALT.exists() else None
 
 
-# --- исход ступени (V1c-E4.1, E4.3, E4.4, E4.5) ------------------------------
+# --- stage outcome (V1c-E4.1, E4.3, E4.4, E4.5) --------------------------------
 def outcome(points: list[dict]) -> dict:
-    """Исход калибровочной части ступени по замороженным определениям.
+    """Outcome of the calibration part of the stage, per the frozen definitions.
 
-    Порядок вычисления объявлен до прогона:
+    The computation order is declared before the run:
 
-      K = множество трёхмерных точек, прошедших ограничение по доле на C при
-          СВОЁМ узле s. K пусто -> FAIL-CAL-KC (V1c-E4.5, первое предложение).
-      полоса = узлы, на которых есть точка K с полной конъюнкцией (V1c-E4.1).
-          Непуста -> исход не выносится здесь: он требует оценки на наборе E,
-          а слепота E расходуется только прогоном оценки.
-      полоса пуста и в K есть точка с превышением потолка -> CEIL
-          (V1c-E4.5, правило приоритета).
-      иначе на верхнем узле s_max есть точка K с типом ниже пола -> FLOOR.
-      иначе -> NOT-TESTABLE: определения E4.3 и E4.5 наблюдённый случай не
-          покрывают, и присвоение исхода по аналогии было бы трактовкой после
-          прогона.
+      K = the set of three-dimensional points that passed the share
+          constraint on C at THEIR OWN node s. K empty -> FAIL-CAL-KC
+          (V1c-E4.5, first sentence).
+      band = the nodes at which there is a K point with the full
+          conjunction (V1c-E4.1). Nonempty -> the outcome is not decided
+          here: it requires evaluation on set E, and the blinding of E is
+          spent only by the evaluation run.
+      band empty and there is a K point that exceeds the ceiling -> CEIL
+          (V1c-E4.5, priority rule).
+      otherwise, at the top node s_max there is a K point with a type below
+          the floor -> FLOOR.
+      otherwise -> NOT-TESTABLE: definitions E4.3 and E4.5 do not cover the
+          observed case, and assigning an outcome by analogy would be an
+          interpretation made after the run.
 
-    Нарушение потолка операционализировано как `not ceiling_ok`, то есть
-    «существует t из T38 с R_t > 67 Гц»: буква V1b-3.4 говорит «для каждого
-    типа», а кванторы E4.3 и E4.5 - «хотя бы один».
+    Ceiling violation is operationalized as `not ceiling_ok`, i.e.
+    "there exists t from T38 with R_t > 67 Hz": the letter of V1b-3.4 says
+    "for every type", while the quantifiers of E4.3 and E4.5 say "at least
+    one".
     """
     import v1b_subcircuit as V
 

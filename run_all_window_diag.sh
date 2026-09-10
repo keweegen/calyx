@@ -1,7 +1,7 @@
 #!/bin/sh
-# Запустить все шарды диагностики зазора (V1c-E6.2) и дождаться их.
-# Независимые процессы, а не multiprocessing.Pool: на этом venv Pool встаёт
-# в дедлок (см. заголовок run_v1b_grid.py).
+# Launch all shards of the gap diagnostic (V1c-E6.2) and wait for them.
+# Independent processes, not multiprocessing.Pool: on this venv, Pool
+# deadlocks (see the header of run_v1b_grid.py).
 N=${1:-8}
 i=0
 while [ "$i" -lt "$N" ]; do
@@ -9,4 +9,4 @@ while [ "$i" -lt "$N" ]; do
   i=$((i + 1))
 done
 wait
-echo "все $N шардов диагностики зазора завершились"
+echo "all $N shards of the gap diagnostic finished"

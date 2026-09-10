@@ -1,7 +1,7 @@
 #!/bin/sh
-# Запустить все восемь шардов ступени V1c параллельно и дождаться их.
-# Восемь независимых процессов, а не multiprocessing.Pool: на этом venv Pool
-# встаёт в дедлок, воркеры висят на 0 % ЦП.
+# Launch all eight shards of the V1c stage in parallel and wait for them.
+# Eight independent processes, not multiprocessing.Pool: on this venv, Pool
+# deadlocks, workers hang at 0% CPU.
 N=${1:-8}
 i=0
 while [ "$i" -lt "$N" ]; do
@@ -9,4 +9,4 @@ while [ "$i" -lt "$N" ]; do
   i=$((i + 1))
 done
 wait
-echo "все $N шардов ступени V1c завершились"
+echo "all $N shards of the V1c stage finished"

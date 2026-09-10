@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
-"""V0 лестницы валидации: воспроизведение опубликованного результата Shiu et al. [2].
+"""V0 of the validation ladder: reproduction of the published result of Shiu et al. [2].
 
-Проверяемое утверждение (рис. 1 статьи): активация сахарных сенсорных нейронов (GRN)
-возбуждает моторный нейрон MN9, управляющий выдвижением хоботка, и частота MN9 растёт
-с частотой входа.
+Claim under test (fig. 1 of the paper): activation of the sugar sensory neurons (GRN)
+excites the motor neuron MN9, which drives proboscis extension, and the MN9 rate
+increases with input frequency.
 
-Это ступень V0: проверяется исправность форка и совпадение с опубликованной моделью
-до того, как в стенд вносится пластичность. Веса здесь не меняются.
+This is stage V0: it checks fork correctness and agreement with the published model
+before plasticity is introduced into the testbed. Weights are not changed here.
 
-Запуск:  .venv/Scripts/python.exe v0_sugar.py [--quick]
+Run:  .venv/Scripts/python.exe v0_sugar.py [--quick]
 """
 import sys, time, json
 from pathlib import Path
@@ -26,7 +26,7 @@ CONFIG = {
     "path_con": str(REPO / "2023_03_23_connectivity_630_final.parquet"),
 }
 
-# FlyWire v630. Сахарные GRN и MN9 — идентификаторы из figures.ipynb репозитория [2].
+# FlyWire v630. Sugar GRN and MN9 IDs are from figures.ipynb of repository [2].
 NEU_SUGAR = [
     720575940624963786, 720575940630233916, 720575940637568838,
     720575940638202345, 720575940617000768, 720575940630797113,
@@ -43,18 +43,18 @@ FREQS = [20, 100, 200] if QUICK else [20, 60, 100, 140, 180, 200]
 N_RUN = 5 if QUICK else 30
 T_RUN = 1000 * ms
 
-# Пик памяти на один воркер при построении полной сети (127 400 нейронов),
-# измерено на этой машине: рабочий набор ~1.95 ГБ, пик при resize синапсов ~2.2 ГБ.
+# Peak memory per worker when building the full network (127,400 neurons),
+# measured on this machine: working set ~1.95 GB, peak at synapse resize ~2.2 GB.
 GB_PER_WORKER = 2.5
 RAM_RESERVE_GB = 4.0
 
 
 def n_proc_by_memory() -> int:
-    """Число воркеров по доступной памяти, а не по числу ядер.
+    """Number of workers based on available memory, not core count.
 
-    run_exp с n_proc=-1 поднимает по процессу на ядро, и каждый строит свою копию
-    сети. На 12 ядрах и 32 ГБ это даёт MemoryError: bad allocation при resize
-    синапсов (замер: пик 31.6 ГБ из 31.8 ГБ). Ограничение снимает причину.
+    run_exp with n_proc=-1 spawns one process per core, and each builds its own
+    copy of the network. On 12 cores and 32 GB this gives MemoryError: bad allocation
+    during synapse resize (measured: peak 31.6 GB of 31.8 GB). The limit removes the cause.
     """
     import ctypes
 
@@ -72,7 +72,7 @@ def n_proc_by_memory() -> int:
         ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(m))
         avail = m.ullAvailPhys / 2**30
     except Exception:
-        return 4  # неизвестная платформа: консервативно
+        return 4  # unknown platform: conservative
 
     import os
     by_mem = int(max(1, (avail - RAM_RESERVE_GB) // GB_PER_WORKER))

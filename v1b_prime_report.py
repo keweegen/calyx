@@ -1,17 +1,20 @@
 # -*- coding: utf-8 -*-
-"""Отчёт ступени V1b′: исход и карта по сетке.
+# Output strings are deliberately Russian: this script must reproduce the
+# committed report byte-for-byte.
+"""Report for stage V1b′: outcome and the grid map.
 
-При исходе FAIL-CAL-MBON спецификация (раздел 3ж, V1b′-4.8) требует привести
-для каждого кандидата `f̄_C`, `max f`, `s_C^{αβ}`, `R_t` для шести типов T₃₈,
-`MD_t` и перечень нарушенных подограничений, а также заголовочную величину -
-максимум по кандидатам от минимума по типам `R_t`, то есть лучшее, что даёт
-семейство на полу при достигнутой разреженности.
+For outcome FAIL-CAL-MBON the specification (section 3ж, V1b′-4.8) requires
+reporting, for each candidate, `f̄_C`, `max f`, `s_C^{αβ}`, `R_t` for the six
+T₃₈ types, `MD_t`, and the list of violated sub-constraints, plus the
+headline value - the maximum over candidates of the minimum over types of
+`R_t`, i.e. the best the family gives at the floor at the sparseness reached.
 
-Отчётные величины V1b′-5а печатаются здесь же: число кандидатов и допустимых
-точек по стадиям и, если выбранная точка существует, её расстояние до края.
+The V1b′-5а reportable quantities are printed here too: the number of
+candidates and admissible points by stage and, if a chosen point exists, its
+distance to the edge.
 
-Запуск:  python v1b_prime_report.py            # таблица и сводка
-         python v1b_prime_report.py --json     # плюс артефакт map.json
+Run:  python v1b_prime_report.py            # table and summary
+      python v1b_prime_report.py --json     # plus the map.json artifact
 """
 from __future__ import annotations
 
@@ -60,7 +63,7 @@ def main() -> int:
         print("стадия %d: точек %d, кандидатов %d, допустимых %d"
               % (n, len(pts), len(cand), len(adm)))
         if unk:
-            # V1b′-4.5: в завершённом прогоне это состояние запрещено
+            # V1b′-4.5: this state is forbidden in a completed run
             print("   ОШИБКА ИСПОЛНЕНИЯ: у %d кандидатов ограничение MBON не "
                   "вычислено" % len(unk))
             return 1
@@ -71,7 +74,7 @@ def main() -> int:
             cand.setdefault(key(p), p)
     print("различных кандидатов по обеим стадиям: %d" % len(cand))
 
-    # выбор точки идёт по стадии 2 (V1b-4.6)
+    # point selection goes by stage 2 (V1b-4.6)
     best = V.choose_point([dict(p, stage=2) for p in s2])
     print()
     if best is not None:

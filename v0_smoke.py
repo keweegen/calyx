@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""V0, дымовой тест: собирается ли модель Shiu et al. на текущем стеке.
+"""V0, smoke test: does the Shiu et al. model build on the current stack.
 
-Проверяется только исправность реализации, не научный результат:
-короткий прогон, мало повторов, известные входные нейроны из example.ipynb.
-Полное воспроизведение — в v0_sugar.py.
+Only implementation correctness is checked, not the scientific result:
+a short run, few repeats, known input neurons from example.ipynb.
+Full reproduction is in v0_sugar.py.
 """
 import sys, time
 from pathlib import Path
@@ -21,7 +21,7 @@ CONFIG = {
     "path_con": str(REPO / "2023_03_23_connectivity_630_final.parquet"),
 }
 
-# сахарные сенсорные нейроны, список из example.ipynb (FlyWire v630)
+# sugar sensory neurons, list from example.ipynb (FlyWire v630)
 NEU_SUGAR = [
     720575940624963786, 720575940630233916, 720575940637568838,
     720575940638202345, 720575940617000768, 720575940630797113,
@@ -34,8 +34,8 @@ NEU_SUGAR = [
 
 def main() -> int:
     params = dict(default_params)
-    params["t_run"] = 100 * ms   # вместо 1000 мс
-    params["n_run"] = 2          # вместо 30
+    params["t_run"] = 100 * ms   # instead of 1000 ms
+    params["n_run"] = 2          # instead of 30
     params["r_poi"] = 150 * Hz
 
     out = HERE / "results" / "smoke"

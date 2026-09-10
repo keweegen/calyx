@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
-"""Классификация вопроса об α′β′ по штампу, записанному до чтения литературы.
+"""Classification of the α′β′ question per the stamp recorded before reading the literature.
 
-Штамп: results/v1c/kc_classification_stamp.json, хэш 8b5c93fd5833648e, записан
-9 сентября 2026 ДО запуска поиска по литературе. Он называет три развилки, их
-следствия, порядок сбора свидетельств и запрет на превращение измеренных
-отношений в параметр. Здесь записан результат применения этого правила.
+Stamp: results/v1c/kc_classification_stamp.json, hash 8b5c93fd5833648e, recorded
+on September 9, 2026 BEFORE the literature search was started. It names three
+branches, their consequences, the order of evidence collection, and a
+prohibition on turning measured ratios into a parameter. The result of applying
+that rule is recorded here.
 
-Скрипт ничего не вычисляет: он фиксирует классификацию и её основания рядом с
-хэшем штампа, чтобы соответствие правила и вывода можно было проверить, а не
-восстанавливать. Проверка целостности штампа выполняется при запуске.
+The script computes nothing: it records the classification and its grounds next
+to the stamp's hash, so that the correspondence between rule and conclusion can
+be checked rather than reconstructed. The stamp's integrity is verified at
+startup.
 
-Запуск:  python scripts/classify_kc_question.py
+Run:  python scripts/classify_kc_question.py
 """
 from __future__ import annotations
 
@@ -596,29 +598,29 @@ RESULT = {
 def main() -> int:
     stamp = OUT / "kc_classification_stamp.json"
     if not stamp.exists():
-        print("штамп не найден: %s" % stamp, file=sys.stderr)
+        print("stamp not found: %s" % stamp, file=sys.stderr)
         return 1
     h = hashlib.sha256(stamp.read_bytes()).hexdigest()
     if not h.startswith(STAMP_HASH_PREFIX):
-        print("штамп изменился после записи: %s против %s"
+        print("stamp changed after being recorded: %s vs %s"
               % (h[:16], STAMP_HASH_PREFIX), file=sys.stderr)
         return 1
     p = OUT / "kc_classification_result.json"
     p.write_text(json.dumps(RESULT, ensure_ascii=False, indent=2),
                  encoding="utf-8")
-    print("штамп цел: %s" % h[:16])
-    print("развилка: %s — %s" % (RESULT["branch"], RESULT["branch_text"]))
-    print("следствие по штампу: %s" % RESULT["consequence_per_stamp"])
+    print("stamp intact: %s" % h[:16])
+    print("branch: %s — %s" % (RESULT["branch"], RESULT["branch_text"]))
+    print("consequence per stamp: %s" % RESULT["consequence_per_stamp"])
     print()
-    print("дефект локализован: %s" % RESULT["where_the_defect_sits"]["in_the_mapping"])
+    print("defect localized: %s" % RESULT["where_the_defect_sits"]["in_the_mapping"])
     print()
-    print("но кандидаты НЕ разделены:")
+    print("but the candidates are NOT separated:")
     for d in RESULT["candidate_defects_not_separated"]:
         if "id" in d:
             print("  %s: %s" % (d["id"], d["assumption"]))
     print()
-    print("что это НЕ разрешает: %s" % RESULT["what_this_does_NOT_authorise"])
-    print("\nзаписано: %s" % p)
+    print("what this does NOT authorize: %s" % RESULT["what_this_does_NOT_authorise"])
+    print("\nwritten: %s" % p)
     return 0
 
 

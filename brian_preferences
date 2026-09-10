@@ -1,14 +1,14 @@
-# Явный бэкенд кодогенерации.
+# Explicit codegen backend.
 #
-# При автовыборе Brian2 в каждом воркере пробует скомпилировать Cython. Если
-# компиляция недоступна, он проваливается и пишет предупреждение через логгер;
-# при десятке параллельных процессов пул loky встаёт в logging.emit (дедлок)
-# либо воркер снимается операционной системой (TerminatedWorkerError). Явный
-# target убирает и пробу компиляции, и поток предупреждений.
+# With auto-selection, Brian2 tries to compile Cython in every worker. If
+# compilation is unavailable, it fails and writes a warning through the logger;
+# with a dozen parallel processes the loky pool gets stuck in logging.emit (deadlock)
+# or the worker gets killed by the operating system (TerminatedWorkerError). An explicit
+# target removes both the compilation probe and the stream of warnings.
 #
-# Для target = 'cython' нужен рабочий компилятор. На Windows setuptools нередко
-# не находит установленную Visual Studio; запуск через msvc_run.bat это решает.
-# Замер обоих бэкендов — bench_backend.py. Смена target меняет конфиг прогона и
-# требует перепрогона лестницы (README).
+# For target = 'cython' a working compiler is required. On Windows, setuptools often
+# fails to find an installed Visual Studio; running via msvc_run.bat solves this.
+# Benchmark of both backends — bench_backend.py. Changing the target changes the run
+# configuration and requires rerunning the ladder (README).
 [codegen]
 target = 'numpy'

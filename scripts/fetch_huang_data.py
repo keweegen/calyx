@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
-"""Скачать архивы Huang et al. 2024 с Zenodo и сверить контрольные суммы.
+"""Download the Huang et al. 2024 archives from Zenodo and verify checksums.
 
-Набор: DOI 10.5281/zenodo.10998457, CC BY 4.0. В репозитории не хранится (DATA.md).
+Dataset: DOI 10.5281/zenodo.10998457, CC BY 4.0. Not stored in the repository (DATA.md).
 
-Особенность источника: файловый эндпоинт Zenodo часто отвечает 504 при работающих
-метаданных. Поэтому качаем целиком во временный файл, сверяем размер из API и
-только потом переименовываем. Докачка (HTTP Range) для этого источника непригодна:
-на 504 в файл пишется HTML-страница ошибки, и продолжение дописывает данные поверх.
+Source quirk: Zenodo's file endpoint often returns 504 while the metadata endpoint
+works fine. So we download the whole thing to a temporary file, verify the size
+against the API, and only then rename it. Resuming (HTTP Range) is unsuitable for
+this source: on a 504 the file gets an HTML error page written into it, and resuming
+would append data on top of that.
 
-Запуск:  python scripts/fetch_huang_data.py [Figure3 Figure4 ...]
-         python scripts/fetch_huang_data.py --all
-Без аргументов качает то, что нужно для эталона H1b: Figure3 и Figure4.
+Run:  python scripts/fetch_huang_data.py [Figure3 Figure4 ...]
+      python scripts/fetch_huang_data.py --all
+With no arguments, downloads what's needed for reference H1b: Figure3 and Figure4.
 """
 from __future__ import annotations
 
@@ -30,7 +31,7 @@ ATTEMPTS = 25
 
 
 def known_checksums() -> dict[str, tuple[int, str]]:
-    """{'Figure3.zip': (size, sha256)} из зафиксированного файла сумм."""
+    """{'Figure3.zip': (size, sha256)} from the frozen checksums file."""
     out: dict[str, tuple[int, str]] = {}
     if not CHECKSUMS.exists():
         return out
@@ -50,7 +51,7 @@ def sha256(path: Path) -> str:
 
 
 def remote_index() -> dict[str, tuple[int, str]]:
-    """{'Figure3.zip': (size, url)} из метаданных записи."""
+    """{'Figure3.zip': (size, url)} from the record metadata."""
     with urllib.request.urlopen(API, timeout=60) as r:
         rec = json.load(r)
     return {f["key"]: (f["size"], f["links"]["self"]) for f in rec["files"]}
@@ -66,13 +67,13 @@ def download(url: str, dst: Path, want_size: int) -> bool:
                 if not chunk:
                     break
                 fh.write(chunk)
-    except Exception as exc:                      # 504 и обрывы — обычное дело
+    except Exception as exc:                      # 504s and drops are routine
         print("      %s" % exc)
         tmp.unlink(missing_ok=True)
         return False
     got = tmp.stat().st_size
     if got != want_size:
-        print("      размер %d, ожидался %d" % (got, want_size))
+        print("      size %d, expected %d" % (got, want_size))
         tmp.unlink(missing_ok=True)
         return False
     tmp.replace(dst)
@@ -94,22 +95,22 @@ def main(argv: list[str]) -> int:
     for stem in names:
         key = stem if stem.endswith(".zip") else stem + ".zip"
         if key not in remote:
-            print("%s: нет в записи Zenodo" % key)
+            print("%s: not in the Zenodo record" % key)
             failed.append(key)
             continue
         want_size, url = remote[key]
         dst = DATA / key
 
         if dst.exists() and dst.stat().st_size == want_size:
-            print("%s: уже на месте (%d байт)" % (key, want_size))
+            print("%s: already present (%d bytes)" % (key, want_size))
         else:
-            print("%s: качаем %.0f МБ" % (key, want_size / 1048576))
+            print("%s: downloading %.0f MB" % (key, want_size / 1048576))
             for attempt in range(1, ATTEMPTS + 1):
                 if download(url, dst, want_size):
                     break
-                print("   попытка %d из %d не удалась" % (attempt, ATTEMPTS))
+                print("   attempt %d of %d failed" % (attempt, ATTEMPTS))
             else:
-                print("%s: не скачался за %d попыток" % (key, ATTEMPTS))
+                print("%s: did not download in %d attempts" % (key, ATTEMPTS))
                 failed.append(key)
                 continue
 
@@ -117,17 +118,17 @@ def main(argv: list[str]) -> int:
             size, digest = known[key]
             actual = sha256(dst)
             if actual == digest and dst.stat().st_size == size:
-                print("   SHA-256 совпадает")
+                print("   SHA-256 matches")
             else:
-                print("   SHA-256 НЕ СОВПАДАЕТ: %s (ожидался %s)" % (actual, digest))
+                print("   SHA-256 MISMATCH: %s (expected %s)" % (actual, digest))
                 failed.append(key)
         else:
-            print("   SHA-256 %s (эталона нет, записать в %s)" % (sha256(dst), CHECKSUMS.name))
+            print("   SHA-256 %s (no reference on file, add it to %s)" % (sha256(dst), CHECKSUMS.name))
 
     if failed:
-        print("\nНе получено или не сверено: %s" % ", ".join(failed))
+        print("\nNot obtained or not verified: %s" % ", ".join(failed))
         return 1
-    print("\nГотово.")
+    print("\nDone.")
     return 0
 
 

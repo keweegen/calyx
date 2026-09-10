@@ -1,42 +1,43 @@
 # -*- coding: utf-8 -*-
-"""Скачать одорантные данные Hallem & Carlson 2006 и построить вход PN для V1b.
+"""Download the Hallem & Carlson 2006 odorant data and build the PN input for V1b.
 
-Источник: пакет `DoOR.data` (rOpenSci), https://github.com/ropensci/DoOR.data,
-ветка master. Он воспроизводит опубликованные матрицы отдельных исследований
-как CSV; данные Hallem & Carlson 2006 [39] лежат в колонке `Hallem.2006.EN`
-файлов по рецепторам, первая строка (`CAS == "SFR"`) — спонтанная активность.
-Метаданные исследования — `door_dataset_info.csv`: электрофизиология, единицы
-«spikes», спонтанная активность вычтена, концентрация 10^-2, растворитель
-парафиновое масло (16 водорастворимых веществ — в воде).
+Source: the `DoOR.data` package (rOpenSci), https://github.com/ropensci/DoOR.data,
+branch master. It reproduces the published matrices of individual studies
+as CSV; the Hallem & Carlson 2006 [39] data live in the `Hallem.2006.EN` column
+of the per-receptor files, the first row (`CAS == "SFR"`) is spontaneous activity.
+Study metadata is in `door_dataset_info.csv`: electrophysiology, units of
+"spikes", spontaneous activity subtracted, concentration 10^-2, solvent
+paraffin oil (16 water-soluble compounds — in water).
 
-Почему Hallem, а не консенсусная матрица DoOR. Решено при предрегистрации V1b.
-Консенсус покрывает больше гломерул в объединении по базе (47 против 24, 89 %
-синапсов PN→KC против 45 %), но покрытие там **зависит от одоранта** (45–80 %
-по панели), а пересечение измеренных гломерул по всем одорантам панели равно
-ровно набору Hallem. Значит весь выигрыш консенсуса состоит из запах-зависимого
-покрытия, а оно вносит артефакт в критерий перекрытия ансамблей, направленный
-в сторону прохождения ступени. Постоянная маска Hallem вносит артефакт
-известного знака, направленный в сторону провала. Выбран второй.
-Консенсус остаётся ветвью чувствительности; она отчётная и вердикт не меняет.
+Why Hallem and not the DoOR consensus matrix. Decided at V1b pre-registration.
+The consensus covers more glomeruli in the union over the database (47 vs. 24, 89%
+of PN->KC synapses vs. 45%), but its coverage there **depends on the odorant** (45-80%
+across the panel), while the intersection of measured glomeruli across all odorants
+of the panel equals exactly the Hallem set. So the entire gain from the consensus
+consists of odor-dependent coverage, and that introduces an artifact into the
+ensemble-overlap criterion, biased toward passing the stage. The constant Hallem
+mask introduces an artifact of known sign, biased toward failure. The latter was
+chosen. The consensus remains a sensitivity branch; it is reported and does not
+change the verdict.
 
-Преобразование ORN → PN: дивизивная нормировка Olsen, Bhandawat & Wilson 2010
-[40], уравнения 2, 4 и 5:
+ORN -> PN transformation: the divisive normalization of Olsen, Bhandawat & Wilson 2010
+[40], equations 2, 4 and 5:
     PN_g = R_max * ORN_g^n / (ORN_g^n + sigma^n + s^n),   s = m * (sum_g ORN_g) / 190
-Константы из статьи, режим A: R_max = 165 спайк/с, sigma = 12 спайк/с, n = 1,5,
-m = 10,63 (гломерула VM7). Отрицательный вход (торможение ниже спонтанного
-уровня) даёт нулевой отклик PN — правило самой статьи; в модели [2] фоновая
-частота равна нулю, поэтому иное представление невозможно.
+Constants from the paper, mode A: R_max = 165 spikes/s, sigma = 12 spikes/s, n = 1.5,
+m = 10.63 (glomerulus VM7). Negative input (inhibition below the spontaneous
+level) gives zero PN response — a rule from the paper itself; in the model [2] the
+baseline rate is zero, so no other representation is possible.
 
-Панель ступени: одоранты, присутствующие одновременно в Hallem 2006 и в
-панелях Honegger 2011 [25] и Campbell 2013 [41] — тех работах, откуда взяты
-числа критериев V1b. Проверено: из 17 химически определённых веществ этих
-панелей в Hallem есть 14 (нет 3-октанола, 4-метилциклогексанола и
-1-гептен-3-ола; последнего нет ни в одном датасете DoOR).
+Stage panel: odorants present simultaneously in Hallem 2006 and in the panels
+of Honegger 2011 [25] and Campbell 2013 [41] — the works the V1b criterion numbers
+are taken from. Verified: of the 17 chemically defined compounds in these
+panels, 14 are in Hallem (missing 3-octanol, 4-methylcyclohexanol and
+1-hepten-3-ol; the last is absent from every DoOR dataset).
 
-Лицензия DoOR.data — MIT; исходные данные Hallem & Carlson 2006 — Cell,
-цитируются по DOI 10.1016/j.cell.2006.01.050. В git данные не кладутся (DATA.md).
+DoOR.data license — MIT; the original Hallem & Carlson 2006 data — Cell,
+cited by DOI 10.1016/j.cell.2006.01.050. Data are not committed to git (DATA.md).
 
-Запуск:  python scripts/fetch_odor_panel.py
+Run:  python scripts/fetch_odor_panel.py
 """
 from __future__ import annotations
 
@@ -58,10 +59,10 @@ API = "https://api.github.com/repos/ropensci/DoOR.data/contents/data"
 
 HC = "Hallem.2006.EN"
 
-# Olsen 2010, режим A
+# Olsen 2010, mode A
 R_MAX, SIGMA, EXPONENT, M_COEF, LFP_DIV = 165.0, 12.0, 1.5, 10.63, 190.0
 
-# панель: Hallem 2006 ∩ (Honegger 2011 ∪ Campbell 2013), по CAS
+# panel: Hallem 2006 ∩ (Honegger 2011 ∪ Campbell 2013), by CAS
 PANEL_CAS = {
     "110-43-0": "2-heptanone",
     "110-93-0": "6-methyl-5-hepten-2-one",
@@ -99,14 +100,14 @@ def sha256(p: Path) -> str:
 
 
 def expand(gl: str) -> set[str]:
-    """hemibrain делит VC3 на VC3l/VC3m; мультигломерулярные записи не разносим."""
+    """hemibrain splits VC3 into VC3l/VC3m; multiglomerular entries are not distributed."""
     if gl == "VC3":
         return {"VC3l", "VC3m"}
     return set() if "+" in gl else {gl}
 
 
 def olsen(orn: pd.Series) -> pd.Series:
-    """ORN (спайк/с, вызванный отклик) -> PN (спайк/с). Olsen 2010, ур. 2, 4, 5."""
+    """ORN (spikes/s, evoked response) -> PN (spikes/s). Olsen 2010, eq. 2, 4, 5."""
     r = orn.clip(lower=0.0)
     s = M_COEF * r.sum() / LFP_DIV
     num = r ** EXPONENT
@@ -132,7 +133,7 @@ def main() -> int:
 
     mat = pd.DataFrame(evoked)
     if mat.shape != (110, 24):
-        print("матрица Hallem не 110x24, а %dx%d — источник изменился" % mat.shape,
+        print("Hallem matrix is not 110x24, but %dx%d — the source has changed" % mat.shape,
               file=sys.stderr)
         return 1
 
@@ -142,17 +143,17 @@ def main() -> int:
 
     neurons = pd.read_csv(SUB / "neurons.csv")
     neurons = neurons.assign(gl=neurons.hemibrain_type.astype(str).str.split("_").str[0])
-    # Оба полушария. Отклик гломерулы присваивается всем её uPN независимо от
-    # стороны: отображение «рецептор → гломерула» стороны не различает, а запах
-    # в норме возбуждает обе антеннальные доли. Односторонняя стимуляция сделала
-    # бы половину компонент вектора перекрытия (раздел 3д) согласованными нулями
-    # и подняла бы корреляцию у всех пар разом.
+    # Both hemispheres. A glomerulus's response is assigned to all of its uPN
+    # regardless of side: the "receptor -> glomerulus" mapping does not distinguish
+    # side, and an odor normally excites both antennal lobes. Unilateral stimulation
+    # would make half the components of the overlap vector (section 3д) agree on
+    # zero and would raise the correlation for every pair at once.
     upn = neurons[(neurons.mb_role == "PN")
                   & (neurons.cell_sub_class == "uniglomerular")]
 
-    # отображение «гломерула -> рецептор»: у VC3 две hemibrain-гломерулы (VC3l, VC3m)
-    # на один рецептор Or35a, и обе получают его отклик. Обратное отображение здесь
-    # некорректно: словарь «рецептор -> гломерула» оставил бы произвольную одну.
+    # "glomerulus -> receptor" mapping: VC3 has two hemibrain glomeruli (VC3l, VC3m)
+    # for one receptor Or35a, and both get its response. The reverse mapping here
+    # would be wrong: a "receptor -> glomerulus" dict would keep an arbitrary one.
     rec_of_gl: dict[str, str] = {}
     for r in mat.columns:
         for gl in sorted(expand(rec2gl.get(r, ""))):
@@ -168,16 +169,16 @@ def main() -> int:
     for cas, name in PANEL_CAS.items():
         key = key_by_cas.get(cas)
         if key not in mat.index:
-            print("одорант %s (%s) отсутствует в матрице Hallem" % (name, cas),
+            print("odorant %s (%s) is absent from the Hallem matrix" % (name, cas),
                   file=sys.stderr)
             return 1
-        # отклик по гломерулам маски; сумма для нормировки — по всем 24 рецепторам
+        # response over the mask glomeruli; the normalization sum is over all 24 receptors
         orn_all = mat.loc[key]
         pn_all = olsen(orn_all)
         rows[name] = {gl: pn_all[rec_of_gl[gl]] for gl in mask_gl}
     pn = pd.DataFrame(rows).T.reindex(columns=mask_gl)
 
-    # покрытие входа
+    # input coverage
     con = pd.read_parquet(SUB / "connectivity.parquet")
     kc = set(neurons.loc[neurons.mb_role == "Kenyon_Cell", "root_id"])
     e = con[con.Postsynaptic_ID.isin(kc) & con.Presynaptic_ID.isin(set(upn.root_id))]
@@ -222,17 +223,17 @@ def main() -> int:
     (OUT / "panel_stats.json").write_text(
         json.dumps(stats, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    print("матрица Hallem: %d одорантов x %d рецепторов, пропусков %d"
+    print("Hallem matrix: %d odorants x %d receptors, %d missing"
           % (mat.shape[0], mat.shape[1], int(mat.isna().sum().sum())))
-    print("панель: %d одорантов, %d пар" % (pn.shape[0], pn.shape[0] * (pn.shape[0] - 1) // 2))
-    print("маска: %d гломерул из %d, %d uPN из %d, %.0f %% синапсов PN->KC"
+    print("panel: %d odorants, %d pairs" % (pn.shape[0], pn.shape[0] * (pn.shape[0] - 1) // 2))
+    print("mask: %d glomeruli out of %d, %d uPN out of %d, %.0f %% of PN->KC synapses"
           % (len(mask_gl), upn.gl.nunique(), int(upn.gl.isin(mask_gl).sum()),
              len(upn), 100 * syn_mask / syn_total))
-    print("покрытие входа KC: медиана %.2f, квартили %.2f/%.2f, ниже 0,1 у %d из %d"
+    print("KC input coverage: median %.2f, quartiles %.2f/%.2f, below 0.1 for %d of %d"
           % (c_i.median(), c_i.quantile(.25), c_i.quantile(.75),
              (c_i < .1).sum(), len(c_i)))
-    print("частоты PN: %.1f-%.1f спайк/с" % (pn.min().min(), pn.max().max()))
-    print("записано: %s" % OUT)
+    print("PN rates: %.1f-%.1f spikes/s" % (pn.min().min(), pn.max().max()))
+    print("written: %s" % OUT)
     return 0
 
 

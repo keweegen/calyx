@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-"""Заморозить предрегистрацию ступени V1b: хэш спецификации, байтовая копия
-и хэш конфига стенда.
+"""Freeze the pre-registration of stage V1b: spec hash, byte copy,
+and testbed config hash.
 
-Порядок обязателен (спецификация, раздел 3, правило v0.11): текст критериев и
-допусков замораживается ДО первого прогона ступени в любом режиме, включая
-разведочный. После заморозки критерии не редактируются; если критерий оказался
-не о той величине, заводится новая ступень с новым именем.
+The order is mandatory (spec, section 3, rule v0.11): the text of the criteria
+and tolerances is frozen BEFORE the first run of the stage in any mode, including
+exploratory. After freezing the criteria are not edited; if a criterion turns out
+to be about the wrong quantity, a new stage is started under a new name.
 
-Запуск:  python scripts/freeze_v1b.py
+Run:  python scripts/freeze_v1b.py
 """
 from __future__ import annotations
 
@@ -32,23 +32,23 @@ def sha256(p: Path) -> str:
 
 def main() -> int:
     if not SPEC.exists():
-        print("спецификация не найдена: %s" % SPEC, file=sys.stderr)
+        print("spec not found: %s" % SPEC, file=sys.stderr)
         return 1
     OUT.mkdir(parents=True, exist_ok=True)
 
     frozen = OUT / ("experiment-spec-h1-h3.%s.frozen.md" % VERSION)
     if frozen.exists():
-        print("замороженная копия уже существует: %s" % frozen.name, file=sys.stderr)
-        print("повторная заморозка запрещена правилом v0.11", file=sys.stderr)
+        print("frozen copy already exists: %s" % frozen.name, file=sys.stderr)
+        print("re-freezing is forbidden by rule v0.11", file=sys.stderr)
         return 1
     shutil.copy2(SPEC, frozen)
 
     spec_hash = sha256(SPEC)
     size = SPEC.stat().st_size
 
-    # Конфиг стенда: всё, что задаёт прогон, кроме двух калибруемых параметров.
-    # Их значения появляются после калибровки и хэшируются отдельно вместе с
-    # картой сетки (V1b-4.6).
+    # Testbed config: everything that defines the run, except the two calibrated
+    # parameters. Their values appear after calibration and are hashed separately
+    # together with the grid map (V1b-4.6).
     cfg = {
         "stage": "V1b",
         "spec_version": VERSION,
@@ -114,10 +114,10 @@ config_v1b.json {cfg_size} {cfg}
            frozen=frozen.name)
 
     (OUT / "spec_sha256.txt").write_text(text, encoding="utf-8")
-    print("заморожено:")
-    print("  спецификация %s  %d байт  %s" % (VERSION, size, spec_hash))
-    print("  конфиг                      %s" % cfg_hash)
-    print("  копия: %s" % frozen)
+    print("frozen:")
+    print("  spec %s  %d bytes  %s" % (VERSION, size, spec_hash))
+    print("  config                      %s" % cfg_hash)
+    print("  copy: %s" % frozen)
     return 0
 
 

@@ -1,7 +1,7 @@
-# Python 3.13.15. Версии зафиксированы по рабочему окружению, на котором пройдена
-# ступень V0. Модель Shiu et al. запускается на них без правок кода, хотя её
-# environment.yml объявляет Python 3.10 / Brian2 2.5.1 / numpy 1.24 — это довод
-# раздела 5.6 whitepaper, а не случайность.
+# Python 3.13.15. Versions are pinned to the working environment on which
+# stage V0 was passed. The Shiu et al. model runs on them without code changes, even though its
+# environment.yml declares Python 3.10 / Brian2 2.5.1 / numpy 1.24 — that is the argument of
+# whitepaper section 5.6, not a coincidence.
 Brian2==2.10.1
 numpy==2.5.3
 pandas==3.0.5
@@ -10,5 +10,5 @@ pyarrow==25.0.1
 joblib==1.6.0
 matplotlib==3.11.1
 sympy==1.14.0
-# Только для диагностики производительности (diag_mem.py):
+# Only for performance diagnostics (diag_mem.py):
 py-spy==0.4.2

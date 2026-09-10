@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
-"""Замер бэкенда кодогенерации: numpy против cython.
+"""Benchmark of the codegen backend: numpy vs cython.
 
-Меряет отдельно постройку сети и симуляцию 1 с модельного времени, в один
-процесс, без joblib — чтобы сравнивать чистую стоимость, а не планировщик.
+Measures network construction and simulation of 1 s of model time separately, in a
+single process, without joblib — to compare pure cost, not the scheduler.
 
-Два масштаба:
-  full — полная модель [2], 127 400 нейронов (эталон ступеней лестницы);
-  sub  — подсхема грибовидного тела, 6 087 нейронов (рабочая конфигурация шагов).
+Two scales:
+  full — the full model [2], 127,400 neurons (reference for the ladder's stages);
+  sub  — mushroom-body subcircuit, 6,087 neurons (working configuration for the steps).
 
-Кэш скомпилированных вставок кладётся на E:, а не в профиль на C:.
+The cache of compiled inserts is placed on E:, not in the profile on C:.
 
-Запуск:  .venv/Scripts/python.exe bench_backend.py numpy full
+Run:  .venv/Scripts/python.exe bench_backend.py numpy full
          .venv/Scripts/python.exe bench_backend.py cython full
          .venv/Scripts/python.exe bench_backend.py cython sub
 """
@@ -36,17 +36,17 @@ T_SIM_MS = 1000
 RATE_HZ = 100
 SEED_ODOR = 20260907 + 1
 
-# Кэш Cython — на E:, чтобы не писать в профиль на C: (ограничение владельца).
+# Cython cache — on E:, to avoid writing to the profile on C: (owner's constraint).
 CACHE = HERE / ".cython_cache"
 CACHE.mkdir(exist_ok=True)
 os.environ.setdefault("BRIAN2_CACHE_DIR", str(CACHE))
 
-from brian2 import prefs  # noqa: E402  импорт после env
+from brian2 import prefs  # noqa: E402  import after env
 
 prefs.codegen.target = TARGET
 if TARGET == "cython":
     prefs.codegen.runtime.cython.cache_dir = str(CACHE)
-    # компиляция в один поток: параллельные воркеры её и клинило раньше
+    # compile on a single thread: parallel workers used to stall on it before
     prefs.codegen.runtime.cython.multiprocess_safe = True
 
 from brian2 import (NeuronGroup, Synapses, PoissonInput, SpikeMonitor,  # noqa: E402
@@ -56,7 +56,7 @@ import numpy as np  # noqa: E402
 
 
 def load(scope: str):
-    """Возвращает (completeness index, connectivity df, список ID для стимуляции)."""
+    """Returns (completeness index, connectivity df, list of IDs to stimulate)."""
     if scope == "full":
         comp = pd.read_csv(REPO / "2023_03_23_completeness_630_final.csv", index_col=0)
         con = pd.read_parquet(REPO / "2023_03_23_connectivity_630_final.parquet")
@@ -73,11 +73,11 @@ def load(scope: str):
 
 
 def main() -> int:
-    print("бэкенд %s, масштаб %s" % (TARGET, SCOPE))
+    print("backend %s, scope %s" % (TARGET, SCOPE))
     comp, con, exc = load(SCOPE)
     ids = list(comp.index.astype("int64"))
     idx = {f: k for k, f in enumerate(ids)}
-    print("сеть: %d нейронов, %d рёбер" % (len(ids), len(con)))
+    print("network: %d neurons, %d edges" % (len(ids), len(con)))
 
     t0 = time.time()
     neu = NeuronGroup(len(ids), model=dp["eqs"], method="linear",
@@ -107,7 +107,7 @@ def main() -> int:
            "n_edges": int(len(con)), "n_stimulated": len(pois),
            "build_s": round(build_s, 2), "run_s": round(run_s, 2),
            "n_spikes": int(mon.num_spikes)}
-    print("постройка %.2f с | симуляция 1 с модельного времени %.2f с | спайков %d"
+    print("build %.2f s | simulation of 1 s model time %.2f s | spikes %d"
           % (build_s, run_s, mon.num_spikes))
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / ("%s_%s.json" % (SCOPE, TARGET))).write_text(

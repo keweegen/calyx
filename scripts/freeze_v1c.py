@@ -1,21 +1,22 @@
 # -*- coding: utf-8 -*-
-"""Заморозить предрегистрацию ступени V1c: хэши, конфиг и байтовая копия.
+"""Freeze the pre-registration of stage V1c: hashes, config and byte copy.
 
-Это заморозка ступени, а не штамп 0. Штамп 0 записан раньше скриптом
-scripts/stamp0_v1c.py и лежит рядом: он доказывает, что конструкция ступени
-старше до-хэшевых измерений. Здесь замораживается версия, в которой числа
-подставлены по формулам штампа 0, заполнены разделы «Происхождение» и
-«Ожидаемый исход» и закрыты оба открытых поля штампа 0.
+This is the stage freeze, not stamp 0. Stamp 0 was recorded earlier by
+scripts/stamp0_v1c.py and sits alongside it: it proves that the stage's design
+predates the pre-hash measurements. What's frozen here is the version in which
+the numbers have been substituted from stamp 0's formulas, the "Provenance" and
+"Expected outcome" sections have been filled in, and both open fields of
+stamp 0 are closed.
 
-Что хэшируется: спецификация целиком; конфиг ступени с пятью каноническими
-узлами сетки; таблица детекторов, на которую спецификация ссылается числами.
-Все три файла защищены от нормализации переводов строки в .gitattributes.
+What gets hashed: the spec in full; the stage config with the five canonical
+grid nodes; the detector table that the spec references by number.
+All three files are protected from line-ending normalization in .gitattributes.
 
-Правило заморозки (раздел 1 спецификации): после записи хэша критерии и
-допуски ступени не редактируются, а прогоны по старой версии не
-переинтерпретируются. Повторная запись запрещена.
+Freeze rule (spec section 1): once the hash is recorded, the stage's criteria
+and tolerances are not edited, and runs against the old version are not
+reinterpreted. Re-recording is forbidden.
 
-Запуск:  python scripts/freeze_v1c.py
+Run:  python scripts/freeze_v1c.py
 """
 from __future__ import annotations
 
@@ -31,10 +32,10 @@ SPEC = Path(r"E:\Neuro\Simulation\whitepaper\experiment-spec-h1-h3.md")
 OUT = HERE / "results" / "v1c"
 VERSION = "v0.17"
 
-# Канонические узлы сетки: десятичные строки спецификации, V1c-E3.2.
-# Строками, а не числами: конфиг читает их как строки, во время исполнения
-# узлы не перевычисляются, и порядок арифметики на границах не влияет на
-# строгость неравенства условия (5).
+# Canonical grid nodes: decimal strings from the spec, V1c-E3.2.
+# As strings, not numbers: the config reads them as strings, the nodes are not
+# recomputed at run time, and the order of arithmetic at the boundaries does not
+# affect the strictness of condition (5)'s inequality.
 NODES = ["1", "1.6836", "1.7783", "3.1623", "5.3875"]
 
 
@@ -44,36 +45,36 @@ def sha256(p: Path) -> str:
 
 def main() -> int:
     if not SPEC.exists():
-        print("спецификация не найдена: %s" % SPEC, file=sys.stderr)
+        print("spec not found: %s" % SPEC, file=sys.stderr)
         return 1
     stamp0 = OUT / "stamp0_sha256.txt"
     if not stamp0.exists():
-        print("штамп 0 не найден: %s" % stamp0, file=sys.stderr)
-        print("заморозка без штампа 0 нарушает правило Д1", file=sys.stderr)
+        print("stamp 0 not found: %s" % stamp0, file=sys.stderr)
+        print("freezing without stamp 0 violates rule D1", file=sys.stderr)
         return 1
 
     det_path = OUT / "detector_table.json"
     weights_path = OUT / "weights_kc_mbon.json"
     for p in (det_path, weights_path):
         if not p.exists():
-            print("нет артефакта до-хэшевого измерения: %s" % p, file=sys.stderr)
+            print("missing pre-hash measurement artefact: %s" % p, file=sys.stderr)
             return 1
 
     det = json.loads(det_path.read_text(encoding="utf-8"))
     if det["nodes"] != NODES:
-        print("узлы таблицы детекторов не совпадают с каноническими: %s"
+        print("detector table nodes do not match the canonical ones: %s"
               % det["nodes"], file=sys.stderr)
         return 1
     if not det["condition5_holds_on_all_nodes"]:
-        print("условие (5) нарушено на каком-то узле - заморозка запрещена",
+        print("condition (5) is violated at some node - freezing forbidden",
               file=sys.stderr)
         return 1
 
     frozen = OUT / ("experiment-spec-h1-h3.%s.frozen.md" % VERSION)
     if frozen.exists():
-        print("предрегистрация уже заморожена: %s" % frozen.name,
+        print("pre-registration already frozen: %s" % frozen.name,
               file=sys.stderr)
-        print("повторная заморозка запрещена правилом раздела 1",
+        print("re-freezing is forbidden by the rule in section 1",
               file=sys.stderr)
         return 1
 
@@ -189,14 +190,14 @@ detector_table.json {det_size} {det}
 
     (OUT / "spec_sha256.txt").write_text(text, encoding="utf-8")
 
-    print("предрегистрация V1c заморожена:")
-    print("  спецификация %s  %d байт  %s" % (VERSION, size, spec_hash))
-    print("  конфиг ступени                 %s" % cfg_hash)
-    print("  таблица детекторов             %s" % det_hash)
-    print("  копия: %s" % frozen)
+    print("V1c pre-registration frozen:")
+    print("  spec %s  %d bytes  %s" % (VERSION, size, spec_hash))
+    print("  stage config                   %s" % cfg_hash)
+    print("  detector table                 %s" % det_hash)
+    print("  copy: %s" % frozen)
     print()
-    print("узлы сетки: %s" % ", ".join(NODES))
-    print("трёхмерных точек: %d" % (57 * len(NODES)))
+    print("grid nodes: %s" % ", ".join(NODES))
+    print("3D points: %d" % (57 * len(NODES)))
     return 0
 
 

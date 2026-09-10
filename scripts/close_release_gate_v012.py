@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Закрытие ворот выпуска v0.12: исходы G1 и G2 против объявленных условий.
+"""Closing the v0.12 release gate: outcomes G1 and G2 against the declared conditions.
 
-Ворота записаны 9 сентября 2026 в results/v1c/release_gate_v012.json, хэш
-185cf07d9b3176bd, ДО выполнения обеих проверок. Здесь записаны их исходы.
-Скрипт проверяет целостность ворот перед записью: условие, изменённое после
-результата, обесценило бы обе проверки.
+The gate was recorded on September 9, 2026 in results/v1c/release_gate_v012.json,
+hash 185cf07d9b3176bd, BEFORE both checks were performed. Their outcomes are
+recorded here. The script verifies the gate's integrity before recording:
+a condition changed after the result would devalue both checks.
 
-Запуск:  python scripts/close_release_gate_v012.py
+Run:  python scripts/close_release_gate_v012.py
 """
 from __future__ import annotations
 
@@ -129,17 +129,17 @@ STATUS = {
 def main() -> int:
     gate = OUT / "release_gate_v012.json"
     if not gate.exists():
-        print("ворота не найдены: %s" % gate, file=sys.stderr)
+        print("gate not found: %s" % gate, file=sys.stderr)
         return 1
     h = hashlib.sha256(gate.read_bytes()).hexdigest()
     if not h.startswith(GATE_HASH_PREFIX):
-        print("ворота изменились после записи: %s против %s"
+        print("gate changed after being recorded: %s vs %s"
               % (h[:16], GATE_HASH_PREFIX), file=sys.stderr)
         return 1
     p = OUT / "release_gate_v012_status.json"
     p.write_text(json.dumps(STATUS, ensure_ascii=False, indent=2),
                  encoding="utf-8")
-    print("ворота целы: %s" % h[:16])
+    print("gate intact: %s" % h[:16])
     print("G1: %s" % STATUS["G1"]["outcome"])
     print("G2: %s" % STATUS["G2"]["outcome"])
     print()
@@ -148,7 +148,7 @@ def main() -> int:
     print(STATUS["what_G2_changes"]["still_no_quantitative_replacement"])
     print()
     print(STATUS["gate_result"])
-    print("\nзаписано: %s" % p)
+    print("\nwritten: %s" % p)
     return 0
 
 

@@ -1,22 +1,24 @@
 # -*- coding: utf-8 -*-
-"""Ворота выпуска ревизии v0.12: два конечных условия, записанные ДО проверок.
+"""Release gate for revision v0.12: two terminating conditions, recorded BEFORE the checks.
 
-Зачем. Whitepaper v0.11 опубликован как отчёт о субстрате. После публикации
-получена классификация вопроса об α′β′ (results/v1c/kc_classification_result.json),
-и её центральный результат достаточно устойчив, чтобы войти в документ. Вносить
-его сейчас нельзя по причине, не связанной с прочностью: две проверки его
-интерпретационного окружения открыты, и выпуск при них создал бы ровно то
-дробное обновление, от которого проект отказался заранее.
+Why. Whitepaper v0.11 was published as a report on the substrate. After
+publication, a classification of the α′β′ question was obtained
+(results/v1c/kc_classification_result.json), and its central result is stable
+enough to go into the document. It cannot be added now for a reason unrelated
+to its robustness: two checks of its interpretive context are still open, and
+releasing while they are open would create exactly the piecemeal update the
+project ruled out in advance.
 
-Ворота записаны ДО того, как проверки выполнены, и захэшированы. Условие,
-сформулированное после результата, есть выбор того результата, который удобно
-считать достаточным.
+The gate is recorded BEFORE the checks are performed, and hashed. A condition
+formulated after the result is the choice of whichever result is convenient to
+consider sufficient.
 
-Существенно: разрешение механизмов M2 и M3 в ворота НЕ входит. Они не являются
-предусловием центрального вывода и прямо помечены как не исключённые. Сделать их
-условием выпуска значило бы завести бесконечную цепочку «ещё одна проверка».
+Importantly: resolving mechanisms M2 and M3 is NOT part of the gate. They are
+not a precondition of the central conclusion and are explicitly marked as not
+excluded. Making them a release condition would start an infinite chain of
+"one more check".
 
-Запуск:  python scripts/stamp_release_gate_v012.py
+Run:  python scripts/stamp_release_gate_v012.py
 """
 from __future__ import annotations
 
@@ -104,9 +106,10 @@ def main() -> int:
     p = OUT / "release_gate_v012.json"
     h = OUT / "release_gate_v012_sha256.txt"
     if p.exists():
-        print("ворота уже записаны: %s\nперезапись запрещена: условия объявлены "
-              "до проверок, и переписать их после значило бы выбрать условие "
-              "под результат." % p, file=sys.stderr)
+        print("gate already recorded: %s\noverwriting is forbidden: the "
+              "conditions were declared before the checks, and rewriting them "
+              "afterward would mean picking the condition to fit the result." % p,
+              file=sys.stderr)
         return 1
     OUT.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(GATE, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -118,12 +121,12 @@ def main() -> int:
         "# Дата записи: 2026-09-09\n"
         "release_gate_v012.json %d %s\n" % (p.stat().st_size, digest),
         encoding="utf-8")
-    print("ворота записаны: %s\nхэш: %s\n" % (p, digest[:16]))
+    print("gate recorded: %s\nhash: %s\n" % (p, digest[:16]))
     for c in GATE["gate_conditions"]:
         print("  %s: %s" % (c["id"], c["what"]))
         for o in c["terminating_outcomes"]:
-            print("       завершает: %s" % o)
-    print("\nНЕ входит в ворота: %s — %s"
+            print("       terminates: %s" % o)
+    print("\nNOT part of the gate: %s — %s"
           % (GATE["explicitly_NOT_in_the_gate"]["what"],
              GATE["explicitly_NOT_in_the_gate"]["why"]))
     return 0

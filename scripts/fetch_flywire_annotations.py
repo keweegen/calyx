@@ -1,26 +1,26 @@
 # -*- coding: utf-8 -*-
-"""Скачать разметку типов клеток FlyWire v630 и сверить контрольные суммы.
+"""Download FlyWire v630 cell-type annotations and verify checksums.
 
-Источник: репозиторий аннотаций Schlegel et al. [18],
-https://github.com/flyconnectome/flywire_annotations, тег `v1.1.0`
-(коммит df6bb136f5b3d91c3992df4e8de2642329e2a384).
+Source: the Schlegel et al. annotation repository [18],
+https://github.com/flyconnectome/flywire_annotations, tag `v1.1.0`
+(commit df6bb136f5b3d91c3992df4e8de2642329e2a384).
 
-Почему именно этот тег. Ветка `main` и теги от `v2.0.0` дают `root_id` для
-материализации FlyWire **783**, а модель [2] построена на **630**; смешивать
-нельзя — идентификаторы разных материализаций не совпадают. Тег `v1.1.0` —
-последний, где `root_id` относится к 630. Это версия аннотаций из препринта
-Schlegel et al.; версия из Nature (2024) — тег `v2.1.0` на 783. Расхождение
-зафиксировано в DATA.md.
+Why this tag specifically. Branch `main` and tags from `v2.0.0` on give `root_id`
+for FlyWire materialization **783**, while the model [2] is built on **630**; the
+two must not be mixed — identifiers from different materializations don't match.
+Tag `v1.1.0` is the last one where `root_id` refers to 630. This is the annotation
+version from the Schlegel et al. preprint; the Nature (2024) version is tag `v2.1.0`
+on 783. The discrepancy is recorded in DATA.md.
 
-Второй файл — метаданные hemibrain [9], выгруженные из neuPrint. Из его поля
-`instance` строится карта «тип → компартмент грибовидного тела»
-(см. build_mb_subcircuit.py); в самих аннотациях FlyWire компартментов нет.
+The second file is hemibrain metadata [9], exported from neuPrint. Its `instance`
+field is used to build the "type -> mushroom body compartment" map
+(see build_mb_subcircuit.py); the FlyWire annotations themselves have no compartments.
 
-Лицензии: аннотации FlyWire — CC BY-NC 4.0 (в репозитории-источнике файла
-LICENSE нет; относим к условиям FlyWire, как остальные данные коннектома);
-hemibrain — CC BY 4.0. В git ничего из этого не кладётся (DATA.md).
+Licenses: FlyWire annotations — CC BY-NC 4.0 (the source repository has no LICENSE
+file; we treat it under FlyWire's terms, like the rest of the connectome data);
+hemibrain — CC BY 4.0. None of this is committed to git (DATA.md).
 
-Запуск:  python scripts/fetch_flywire_annotations.py
+Run:  python scripts/fetch_flywire_annotations.py
 """
 from __future__ import annotations
 
@@ -51,7 +51,7 @@ def sha256(path: Path) -> str:
 
 
 def known_checksums() -> dict[str, tuple[int, str]]:
-    """{'файл': (размер, sha256)} из зафиксированного файла сумм."""
+    """{'file': (size, sha256)} from the frozen checksums file."""
     out: dict[str, tuple[int, str]] = {}
     if not CHECKSUMS.exists():
         return out
@@ -88,33 +88,33 @@ def main() -> int:
     for name in FILES:
         dst = DEST / name
         if not dst.exists():
-            print("%s: качаем" % name)
+            print("%s: downloading" % name)
             for attempt in range(1, ATTEMPTS + 1):
                 if download(BASE + name, dst):
                     break
-                print("   попытка %d из %d не удалась" % (attempt, ATTEMPTS))
+                print("   attempt %d of %d failed" % (attempt, ATTEMPTS))
             else:
-                print("%s: не скачался" % name)
+                print("%s: did not download" % name)
                 failed.append(name)
                 continue
         else:
-            print("%s: уже на месте (%d байт)" % (name, dst.stat().st_size))
+            print("%s: already present (%d bytes)" % (name, dst.stat().st_size))
 
         actual = sha256(dst)
         if name in known:
             size, digest = known[name]
             if actual == digest and dst.stat().st_size == size:
-                print("   SHA-256 совпадает")
+                print("   SHA-256 matches")
             else:
-                print("   SHA-256 НЕ СОВПАДАЕТ: %s (ожидался %s)" % (actual, digest))
+                print("   SHA-256 MISMATCH: %s (expected %s)" % (actual, digest))
                 failed.append(name)
         else:
-            print("   SHA-256 %s (эталона нет, записать в %s)" % (actual, CHECKSUMS.name))
+            print("   SHA-256 %s (no reference on file, add it to %s)" % (actual, CHECKSUMS.name))
 
     if failed:
-        print("\nНе получено или не сверено: %s" % ", ".join(failed))
+        print("\nNot obtained or not verified: %s" % ", ".join(failed))
         return 1
-    print("\nГотово.")
+    print("\nDone.")
     return 0
 
 

@@ -1,162 +1,162 @@
-# Calyx — стенд для проверки правил обучения на коннектоме дрозофилы
+# Calyx — a testbed for validating learning rules on the Drosophila connectome
 
-Код стенда, в котором правило обучения является подменяемым модулем поверх реального
-коннектома, а критерии провала фиксируются до запуска.
+Testbed code where the learning rule is a swappable module on top of a real
+connectome, and failure criteria are fixed before the run.
 
-Документы проекта — whitepaper, спецификация эксперимента H1–H3 и записка об измерении,
-на котором стоит результат, — опубликованы отдельно: <https://keweegen.github.io/calyx>.
+Project documents — the whitepaper, the H1–H3 experiment specification, and a note on the measurement
+the result rests on — are published separately: <https://keweegen.github.io/calyx>.
 
-Код и текст документов — Apache-2.0, © 2026 16th Research Lab MMC: пользуйтесь, меняйте,
-распространяйте. Артефакты прогонов производны от данных FlyWire (CC BY-NC 4.0) и
-наследуют запрет коммерческого использования — это условие лицензиара, а не проекта.
-Эталон, вычисленный из данных Huang и соавторов, — CC BY 4.0. Подробности в `NOTICE`.
+Code and document text are Apache-2.0, © 2026 16th Research Lab MMC: use, modify,
+distribute. Run artifacts are derived from FlyWire data (CC BY-NC 4.0) and
+inherit the non-commercial-use restriction — that is the licensor's condition, not the project's.
+The reference computed from Huang et al. data is CC BY 4.0. Details in `NOTICE`.
 
-**Статус: лестница валидации остановлена, стенд с пластичностью не построен.** Ни одного
-прогона с пластичностью не выполнено и не будет: правило остановки сработало
-(whitepaper, раздел 6.5б). Репозиторий открыт до первого содержательного результата,
-как и обещал раздел 6.4 whitepaper, поэтому отрицательный результат опубликован ровно
-так же, как был бы опубликован положительный. Пройдены V0 и V1a-S; V1a-D не пройдена и остановлена;
-V1b закрыта по ошибке исполнения, а заменившая её V1b′ дала предзарегистрированный
-отрицательный результат. V1c — третья ручка — прогнана 9 сентября 2026 и тоже
-закрыта отрицательно, но исходом, отличным от объявленного ожидания.
+**Status: the validation ladder is stopped, the testbed with plasticity is not built.** Not a single
+run with plasticity has been performed and none will be: the stopping rule fired
+(whitepaper, section 6.5б). The repository is open until the first substantive result,
+as section 6.4 of the whitepaper promised, so the negative result is published exactly
+the same way a positive one would have been. V0 and V1a-S passed; V1a-D did not pass and is stopped;
+V1b is closed due to an execution error, and V1b′, which replaced it, gave the pre-registered
+negative result. V1c — the third knob — was run on September 9, 2026 and also
+closed negative, but with an outcome different from the announced expectation.
 
-## Лестница валидации
+## Validation ladder
 
-| Ступень | Что проверяет | Статус |
+| Stage | What it checks | Status |
 |---|---|---|
-| V0 | Симулятор и конфиг: детерминизм, отсутствие активности без входа | **пройдена** 7 сентября 2026 |
-| V1a-S | Достоверность субстрата: подсхема против полной модели Shiu et al. | **пройдена** 8 сентября 2026 |
-| V1a-D | Валидация декодера уровня 1 | **не пройдена, ветвь остановлена** 8 сентября 2026 |
-| V1b | Подсхема после подмен шага 1 (маска синапсов DAN, градуальный APL, калибровка) | **закрыта, NOT-TESTABLE** 8 сентября 2026: код реализовал ограничение допустимости не по букве спецификации |
-| V1b′ | То же с допустимостью по букве | **закрыта, FAIL-CAL-MBON** 9 сентября 2026 |
-| V1c | Третья ручка: масштаб весов KC→MBON | **закрыта, FAIL-CAL-MBON-FLOOR** 9 сентября 2026, спецификация v0.17, хэш `636c49968a0866bd`. Ожидался FAIL-CAL-MBON-CEIL — ожидание не подтвердилось |
-| V2 | Правило как спецификация на редуцированной схеме в частотном эквиваленте | — |
-| V3 | Трансляция правила в Brian 2 / NESTML | — |
-| H1 | Шаг 1: обонятельное обусловливание на коннектомно-полной подсхеме | — |
+| V0 | Simulator and config: determinism, no activity without input | **passed** September 7, 2026 |
+| V1a-S | Substrate fidelity: subcircuit vs. the full Shiu et al. model | **passed** September 8, 2026 |
+| V1a-D | Level-1 decoder validation | **not passed, branch stopped** September 8, 2026 |
+| V1b | Subcircuit after step-1 substitutions (DAN synapse mask, graded APL, calibration) | **closed, NOT-TESTABLE** September 8, 2026: the code implemented the admissibility constraint not to the letter of the specification |
+| V1b′ | Same, with admissibility to the letter | **closed, FAIL-CAL-MBON** September 9, 2026 |
+| V1c | Third knob: KC→MBON weight scale | **closed, FAIL-CAL-MBON-FLOOR** September 9, 2026, specification v0.17, hash `636c49968a0866bd`. FAIL-CAL-MBON-CEIL was expected — the expectation was not confirmed |
+| V2 | The rule as a specification on a reduced circuit in a rate-equivalent form | — |
+| V3 | Translation of the rule into Brian 2 / NESTML | — |
+| H1 | Step 1: olfactory conditioning on the connectome-complete subcircuit | — |
 
-Лестница упорядочена зависимостями, а не линейно (спецификация, раздел 3, правка
-v0.10): переход к V1b требовал прохождения V1a-S, а V1a-D остаётся отдельным
-зарегистрированным результатом и V1b не блокирует, поскольку критерии V1b декодер
-не используют. Ретроактивно V1a-D пройденной не объявляется. Формулировки и
-критерии — в спецификации эксперимента, раздел 3.
+The ladder is ordered by dependencies, not linearly (specification, section 3, revision
+v0.10): moving to V1b required passing V1a-S, while V1a-D remains a separate
+registered result and does not block V1b, since V1b's criteria do not use the decoder.
+V1a-D is not retroactively declared passed. Wording and
+criteria are in the experiment specification, section 3.
 
-### Результат V1b′
+### V1b′ result
 
-Ступень предзарегистрирована спецификацией v0.15 с объявленным до прогона
-ожидаемым исходом. Из 447 точек сетки 57 вышли на разреженный режим клеток
-Кеньона, но **ни одна не прошла ограничение по отклику выходных нейронов**:
-потолок 67 Гц не нарушен нигде, а пол 2 Гц не достигнут ни у одного из шести
-эталонных типов ни в одной точке. Лучшая частота одного типа во всей сетке —
-0,33 Гц.
+The stage was pre-registered by specification v0.15 with the expected outcome
+declared before the run. Of 447 grid points, 57 reached the Kenyon-cell sparse
+regime, but **none passed the output-neuron response constraint**:
+the 67 Hz ceiling was not violated anywhere, and the 2 Hz floor was not reached for any
+of the six reference types at any point. The best rate for a single type across the whole grid
+was 0.33 Hz.
 
-Содержательно: в семействе с фиксированными по Shiu et al. весами KC→MBON и
-нулевым фоном MBON разреженность клеток Кеньона и рабочий диапазон выходных
-нейронов одновременно недостижимы. Утверждение относится к этому семейству и к
-этой сетке, а не к коннектому. Отчёты — [`results/v1b_prime/report_v1b_prime.md`](results/v1b_prime/report_v1b_prime.md)
-и [`results/v1b/report_v1b_closure.md`](results/v1b/report_v1b_closure.md).
+Substantively: in the family with KC→MBON weights fixed per Shiu et al. and
+zero MBON background, Kenyon-cell sparseness and the output-neuron operating range
+are simultaneously unreachable. The claim applies to this family and to
+this grid, not to the connectome. Reports — [`results/v1b_prime/report_v1b_prime.md`](results/v1b_prime/report_v1b_prime.md)
+and [`results/v1b/report_v1b_closure.md`](results/v1b/report_v1b_closure.md).
 
-### Результат V1c
+### V1c result
 
-Третья и последняя разрешённая ручка — один глобальный множитель `s` на все веса
-KC→MBON. Конструкция ступени записана формулами и захэширована как штамп 0
-(`results/v1c/stamp0_sha256.txt`) до всех измерений, которые могли дать её числа;
-предрегистрация — версия v0.17, хэш `636c49968a0866bd`. Ожидаемый исход объявлен до
-прогона: FAIL-CAL-MBON-CEIL.
+The third and last allowed knob is a single global multiplier `s` on all
+KC→MBON weights. The stage's design was recorded as formulas and hashed as stamp 0
+(`results/v1c/stamp0_sha256.txt`) before any measurements that could have produced its numbers;
+the pre-registration is version v0.17, hash `636c49968a0866bd`. The expected outcome was declared before
+the run: FAIL-CAL-MBON-CEIL.
 
-**Прогнана 9 сентября 2026: исход FAIL-CAL-MBON-FLOOR, ожидание не подтвердилось.**
-285 точек, 270 из них допустимы по разреженности, полоса пуста. Разбор механизма и
-границы вывода — whitepaper, разделы 5.10 и 5.11; полный отчёт прогона —
+**Run on September 9, 2026: outcome FAIL-CAL-MBON-FLOOR, the expectation was not confirmed.**
+285 points, 270 of them admissible by sparseness, the band is empty. Mechanism analysis and
+inference bounds — whitepaper, sections 5.10 and 5.11; the full run report —
 [`results/v1c/report_v1c.md`](results/v1c/report_v1c.md).
 
-### Результат V0
+### V0 result
 
-Сахарные сенсорные нейроны → мотонейрон MN9, FlyWire v630, 6 частот × 30 повторов ×
-1000 мс. Порог между 20 и 60 Гц, монотонный рост с насыщением — воспроизводит
-рис. 1D статьи Shiu et al.
+Sugar sensory neurons → motor neuron MN9, FlyWire v630, 6 frequencies × 30 repeats ×
+1000 ms. Threshold between 20 and 60 Hz, monotonic growth with saturation — reproduces
+Fig. 1D of the Shiu et al. paper.
 
-| Вход, Гц | 20 | 60 | 100 | 140 | 180 | 200 |
+| Input, Hz | 20 | 60 | 100 | 140 | 180 | 200 |
 |---|---|---|---|---|---|---|
-| MN9, Гц | 0,00 | 37,60 | 65,80 | 80,30 | 87,67 | 93,37 |
+| MN9, Hz | 0.00 | 37.60 | 65.80 | 80.30 | 87.67 | 93.37 |
 
-Сводки — `results/v0_sugar/rate.csv` и `mn9.json`.
+Summaries — `results/v0_sugar/rate.csv` and `mn9.json`.
 
-## Установка
+## Installation
 
 ```
 python -m venv .venv
 .venv/Scripts/pip install -r requirements.txt   # Linux/macOS: .venv/bin/pip
-python scripts/setup_model.py                   # модель Shiu на зафиксированном коммите
-python scripts/fetch_huang_data.py              # данные Huang с Zenodo, со сверкой сумм
+python scripts/setup_model.py                   # the Shiu model at a fixed commit
+python scripts/fetch_huang_data.py              # Huang data from Zenodo, with checksum verification
 ```
 
-Крупные файлы в репозитории не хранятся — почему и откуда берутся, см.
+Large files are not stored in the repository — why, and where they come from, see
 [DATA.md](DATA.md).
 
-## Бэкенд кодогенерации
+## Code-generation backend
 
-По умолчанию `brian_preferences` задаёт `codegen.target = 'numpy'`. Явный target
-нужен потому, что при автовыборе Brian2 в каждом воркере пробует скомпилировать
-Cython, проваливается и пишет предупреждение через логгер; на 12 параллельных
-процессах пул loky встаёт в `logging.emit`.
+By default `brian_preferences` sets `codegen.target = 'numpy'`. An explicit target
+is needed because with auto-selection, Brian2 tries to compile
+Cython in each worker, fails, and writes a warning through the logger; on 12 parallel
+processes the loky pool stalls in `logging.emit`.
 
-Провал не обязательно означает, что компилятора нет: на Windows `setuptools`
-нередко не находит установленную Visual Studio и падает с
-`Unable to find a compatible Visual Studio installation`. Обёртка
-`msvc_run.bat` ищет установку через `vswhere`, вызывает `vcvars64.bat` и ставит
-`DISTUTILS_USE_SDK=1`, после чего компиляция проходит; кэш вставок кладётся в
-`.cython_cache` рядом с кодом.
+Failure doesn't necessarily mean there's no compiler: on Windows `setuptools`
+often fails to find an installed Visual Studio and fails with
+`Unable to find a compatible Visual Studio installation`. The
+`msvc_run.bat` wrapper finds the installation via `vswhere`, calls `vcvars64.bat`, and sets
+`DISTUTILS_USE_SDK=1`, after which compilation succeeds; the insert cache is placed in
+`.cython_cache` next to the code.
 
-Замер обоих бэкендов — `bench_backend.py`, результаты в
-`results/bench_backend/`. Бэкенд входит в конфиг прогона, а конфиг хэшируется,
-поэтому смена бэкенда требует перепрогона ступеней лестницы с переморозкой
-фикстур.
+Measurement of both backends — `bench_backend.py`, results in
+`results/bench_backend/`. The backend is part of the run config, and the config is hashed,
+so changing the backend requires re-running the ladder's stages with fixture refreezing.
 
-## Что здесь есть
+## What's here
 
-| Файл | Назначение |
+| File | Purpose |
 |---|---|
-| `v0_smoke.py` | Дымовой тест: модель поднимается и считает |
-| `v0_sugar.py` | Ступень V0. Число процессов считается от доступной памяти: полный мозг занимает ~2 ГБ на воркер, и `n_proc=-1` на 12 ядрах даёт `MemoryError` |
-| `bench_mb_size.py` | Замер стоимости на подсхеме размера грибовидного тела |
-| `diag_mem.py` | Диагностика памяти |
-| `huang_design.py` | Разбор дизайна архивов Huang: типы клеток, мухи, сессии, разметка CS+/CS− |
-| `huang_reference.py` | Расчёт эталона H1b из открытых данных по процедуре раздела 6а спецификации |
-| `brian_preferences` | Бэкенд Brian2 = numpy |
-| `results/huang_reference/` | Вычисленный эталон, разбор дизайна, контрольные суммы архивов |
+| `v0_smoke.py` | Smoke test: the model comes up and computes |
+| `v0_sugar.py` | Stage V0. The number of processes is computed from available memory: the full brain takes ~2 GB per worker, and `n_proc=-1` on 12 cores gives a `MemoryError` |
+| `bench_mb_size.py` | Cost measurement on a mushroom-body-sized subcircuit |
+| `diag_mem.py` | Memory diagnostics |
+| `huang_design.py` | Parsing the design of the Huang archives: cell types, flies, sessions, CS+/CS− labeling |
+| `huang_reference.py` | Computing the H1b reference from open data by the procedure of specification section 6а |
+| `brian_preferences` | Brian2 backend = numpy |
+| `results/huang_reference/` | The computed reference, design breakdown, archive checksums |
 
-### Эталон H1b
+### H1b reference
 
-`huang_reference.py` считает из данных Huang et al. 2024 величину, с которой
-сравнивается модельный эффект. Для MBON-γ1pedc>α/β смещение ответа на подкреплённый
-запах относительно контрольного, через 5 минут после обучения:
+`huang_reference.py` computes, from Huang et al. 2024 data, the value against which
+the model effect is compared. For MBON-γ1pedc>α/β, the response shift to the reinforced
+odor relative to control, 5 minutes after training:
 
-**−34,27 Гц, 95 % ДИ [−44,08; −24,46]**, n = 12 мух.
+**−34.27 Hz, 95% CI [−44.08, −24.46]**, n = 12 flies.
 
-Процедура зафиксирована в спецификации **до** прогона, чтобы её нельзя было
-подстроить под результат. Проверка извлечения: та же процедура выделяет значимый
-эффект ровно у MBON-γ1pedc>α/β, MBON-γ2α′1 и MBON-α3 — список совпадает с
-опубликованным в источнике.
+The procedure is fixed in the specification **before** the run, so it cannot be
+tuned to the result. Extraction check: the same procedure picks out a significant
+effect for exactly MBON-γ1pedc>α/β, MBON-γ2α′1, and MBON-α3 — the list matches
+the one published in the source.
 
-Эталон ограничивает выход подсхемы, а не веса напрямую: это частота спайков нейрона,
-а не сила синапса. Мухи в записях — не та особь, с которой снят коннектом.
+The reference constrains the subcircuit's output, not the weights directly: it is a neuron's spike
+rate, not synaptic strength. The flies in the recordings are not the individual the connectome
+was captured from.
 
-## Лицензии
+## Licenses
 
-Код стенда — **Apache License 2.0** ([LICENSE](LICENSE)). Атрибуция и сторонние
-компоненты — [NOTICE](NOTICE).
+Testbed code is **Apache License 2.0** ([LICENSE](LICENSE)). Attribution and third-party
+components — [NOTICE](NOTICE).
 
-Сторонние данные и код не редистрибутируются, поэтому их лицензии на лицензию
-этого репозитория не влияют. Существенное следствие: модель Shiu et al. под MIT
-содержит внутри данные FlyWire под **CC BY-NC 4.0**, и если бы они лежали здесь,
-ограничение некоммерческого использования распространилось бы на весь стенд. Данные
-Huang et al. — под **CC BY 4.0**, без такого ограничения. Разбор — [DATA.md](DATA.md).
+Third-party data and code are not redistributed, so their licenses do not affect
+this repository's license. A significant consequence: the Shiu et al. model under MIT
+contains inside it FlyWire data under **CC BY-NC 4.0**, and if it were placed here,
+the non-commercial-use restriction would spread to the whole testbed. The
+Huang et al. data is under **CC BY 4.0**, with no such restriction. Details — [DATA.md](DATA.md).
 
-Открытым остаётся правообладатель: указан автор как физическое лицо, но это может
-быть 16th Research Lab (см. NOTICE и записку «Организационная форма и лицензии»).
+The rights holder remains an open question: the author is listed as a natural person, but this may
+be 16th Research Lab (see NOTICE and the note "Organizational form and licenses").
 
-## Источники
+## References
 
 - Dorkenwald et al. Neuronal wiring diagram of an adult brain. *Nature* 634, 124–138 (2024). <https://doi.org/10.1038/s41586-024-07558-y>
 - Shiu et al. A Drosophila computational brain model reveals sensorimotor processing. *Nature* 634, 210–219 (2024). <https://doi.org/10.1038/s41586-024-07763-9>
 - Huang et al. Dopamine-mediated interactions between short- and long-term memory dynamics. *Nature* 634, 1141–1149 (2024). <https://doi.org/10.1038/s41586-024-07819-w>
-- Данные к Huang et al.: Zenodo, <https://doi.org/10.5281/zenodo.10998457> (CC BY 4.0)
+- Data for Huang et al.: Zenodo, <https://doi.org/10.5281/zenodo.10998457> (CC BY 4.0)

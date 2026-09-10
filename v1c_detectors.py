@@ -1,31 +1,31 @@
 # -*- coding: utf-8 -*-
-"""Таблица детекторов ступени V1c: некритериальный выход и проверка согласованности.
+"""Detector table of the V1c stage: non-criterion output and consistency check.
 
-Что это. На каждом узле сетки по `s` — список клеток MBON, для которых
-одиночный спайк одной клетки Кеньона доводит клетку до порога:
+What this is. At every grid node over `s` — a list of MBON cells for which a
+single spike of one Kenyon cell drives the cell to threshold:
 
-    клетка m есть детектор на узле s_k   <=>   s_k · A · w_max(m) > θ,
+    cell m is a detector at node s_k   <=>   s_k · A · w_max(m) > θ,
 
-неравенство строгое; `A` — множитель пикового отклонения одиночного ВПСП,
-`θ = v_th − v_0`, `w_max(m)` — вес самого сильного одиночного ребра KC→m при
-`s = 1`, взятый по клетке, а не по типу.
+the inequality is strict; `A` is the peak-deflection factor of a single
+EPSP, `θ = v_th − v_0`, `w_max(m)` is the weight of the strongest single
+KC→m edge at `s = 1`, taken per cell, not per type.
 
-Статус величины. Это арифметика над наблюдаемыми, записанными измерением
-V1c-E6.1 (`w_max(m)` на каждый из 97 MBON) и над константами модели.
-По правилу Е4 такая величина есть производная и критерием быть не может;
-таблица объявлена некритериальным выходом ступени. Симулятор не запускается,
-ни один параметр не меняется, новая ось не вводится — правило Д2 соблюдено
-тождественно.
+Status of the value. This is arithmetic over observables recorded by
+measurement V1c-E6.1 (`w_max(m)` for each of the 97 MBON) and over the model
+constants. Under rule Е4 such a value is derived and cannot be a criterion;
+the table is declared a non-criterion output of the stage. The simulator is
+not run, no parameter is changed, no new axis is introduced — rule Д2 is
+satisfied identically.
 
-Канонические значения узлов — десятичные строки спецификации, а не результат
-перевычисления формул во время исполнения. Граничные узлы `s_pop` и `s_max`
-округлены вниз, поэтому задающие их клетки на своих граничных узлах
-детекторами не являются и строгость неравенства не зависит от порядка
-арифметики.
+The canonical node values are the decimal strings of the spec, not the
+result of recomputing formulas at run time. The boundary nodes `s_pop` and
+`s_max` are rounded down, so the cells that define them are not detectors at
+their own boundary nodes, and the strictness of the inequality does not
+depend on arithmetic order.
 
-Запуск:
-    python v1c_detectors.py                 # построить таблицу
-    python v1c_detectors.py --check         # сверить с таблицей спецификации
+Run:
+    python v1c_detectors.py                 # build the table
+    python v1c_detectors.py --check         # check against the recorded table
 """
 from __future__ import annotations
 
@@ -42,9 +42,9 @@ WEIGHTS = OUT / "weights_kc_mbon.json"
 
 T38 = ["MBON11", "MBON12", "MBON13", "MBON14", "MBON17", "MBON18"]
 
-# Канонические узлы сетки: строки спецификации, раздел 3з, V1c-E3.2.
-# 1 и 10^(k/4) - по формуле, с округлением по ближайшему; s_pop и s_max -
-# по формуле V1c-E3.1, с округлением вниз.
+# Canonical grid nodes: spec strings, section 3з, V1c-E3.2.
+# 1 and 10^(k/4) - by formula, rounded to nearest; s_pop and s_max - by
+# formula V1c-E3.1, rounded down.
 NODES = ("1", "1.6836", "1.7783", "3.1623", "5.3875")
 NODE_KIND = {"1": "s_min, формула E3.1",
              "1.6836": "s_pop, формула E3.1 по всем MBON, округление вниз",
@@ -62,8 +62,8 @@ def build() -> dict:
     side = dict(zip(neurons.root_id, neurons.side.astype("string")))
     comp = dict(zip(neurons.root_id, neurons.compartment.astype("string")))
 
-    # число синапсов самого сильного ребра: читается из той же таблицы связей,
-    # из которой измерение E6.1 взяло w_max
+    # number of synapses of the strongest edge: read from the same
+    # connectivity table from which measurement E6.1 took w_max
     con = pd.read_parquet(SUB / "connectivity.parquet")
     role = dict(zip(neurons.root_id, neurons.mb_role))
     pre = con.Presynaptic_ID.map(role)
@@ -131,7 +131,7 @@ def build() -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true",
-                    help="сверить с записанной таблицей вместо перезаписи")
+                    help="verify against the recorded table instead of overwriting it")
     a = ap.parse_args()
 
     t = build()
@@ -139,39 +139,39 @@ def main() -> int:
 
     if a.check:
         if not p.exists():
-            raise SystemExit("таблица не записана: %s" % p)
+            raise SystemExit("table not recorded: %s" % p)
         old = json.loads(p.read_text(encoding="utf-8"))
         diff = [k for k in ("by_node", "cells", "A", "theta_mV", "nodes")
                 if old.get(k) != t[k]]
-        print("сверка таблицы детекторов: %s"
-              % ("совпадает" if not diff
-                 else "РАСХОЖДЕНИЕ в полях " + ", ".join(diff)))
+        print("detector table check: %s"
+              % ("matches" if not diff
+                 else "DISCREPANCY in fields " + ", ".join(diff)))
         return 0 if not diff else 1
 
     OUT.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(t, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    print("Таблица детекторов ступени V1c (некритериальный выход)")
-    print("A = %.6f, θ = %.1f мВ, клеток %d, из них без входа KC %d"
+    print("Detector table of the V1c stage (non-criterion output)")
+    print("A = %.6f, θ = %.1f mV, cells %d, of which without KC input %d"
           % (t["A"], t["theta_mV"], t["n_cells_total"],
              t["n_cells_without_kc_input"]))
-    print("\n%-9s %8s %10s   %s" % ("узел s", "в T38", "вне T38",
-                                    "типы вне T38"))
+    print("\n%-9s %8s %10s   %s" % ("node s", "in T38", "outside T38",
+                                    "types outside T38"))
     for s in NODES:
         d = t["by_node"][s]
         print("%-9s %8d %10d   %s"
               % (s, d["n_detectors_T38"], d["n_detectors_outside_T38"],
                  ", ".join(d["types_outside_T38"]) or "-"))
-    print("\nусловие (5) на всех узлах: %s"
-          % ("выполнено - в T38 детекторов нет"
-             if t["condition5_holds_on_all_nodes"] else "НАРУШЕНО"))
-    print("\nдетекторы верхнего узла %s:" % NODES[-1])
+    print("\ncondition (5) on all nodes: %s"
+          % ("holds - no detectors in T38"
+             if t["condition5_holds_on_all_nodes"] else "VIOLATED"))
+    print("\ndetectors at the top node %s:" % NODES[-1])
     for c in t["by_node"][NODES[-1]]["detectors"]:
-        print("  %d  %-8s %-6s %-5s w_max %7.4f мВ, синапсов %3d, s·A·w/θ = %.4f"
+        print("  %d  %-8s %-6s %-5s w_max %7.4f mV, synapses %3d, s·A·w/θ = %.4f"
               % (c["mbon_id"], c["hemibrain_type"], c["side"],
                  c["compartment"], c["w_max_mV"], c["n_synapses_max_edge"],
                  c["ratio_to_theta"]))
-    print("\nзаписано: %s" % p)
+    print("\nwritten: %s" % p)
     return 0
 
 

@@ -1,24 +1,27 @@
 # -*- coding: utf-8 -*-
-"""Измерение V1c-E6.1: структурные веса KC->MBON в подсхеме.
+"""Measurement V1c-E6.1: structural KC->MBON weights in the subcircuit.
 
-Разрешено правилом Д (спецификация, раздел 1а) и перечислено в штампе 0
-ступени V1c (раздел 3з, V1c-E6.1). Штамп 0 записан ДО этого измерения:
-results/v1c/stamp0_sha256.txt. Симулятор не запускается, ни один параметр не
-меняется, ни одна переменная состояния не регистрируется - читаются таблица
-связей подсхемы и константы модели [2].
+Permitted by rule Д (spec, section 1a) and listed in stamp 0 of the V1c
+stage (section 3з, V1c-E6.1). Stamp 0 was recorded BEFORE this measurement:
+results/v1c/stamp0_sha256.txt. The simulator is not run, no parameter is
+changed, no state variable is recorded - the subcircuit connectivity table
+and the model constants [2] are read.
 
-Что считается:
-  - на каждый MBON подсхемы: число рёбер KC->m, число синапсов, сумма весов,
-    максимальный вес одного ребра, квантили распределения весов 10/50/90 %;
-  - агрегаты на каждый из шести типов T38 и на все MBON;
-  - число A и время пика одиночного ВПСП по формулам V1c-E3.1;
-  - верхняя граница сетки s_max по формуле V1c-E3.1;
-  - проверка тестируемости V1c-E5: тип T38 с нулевой суммой весов у всех
-    своих клеток делает ступень непроверяемой по построению.
+What is computed:
+  - for each MBON of the subcircuit: the number of KC->m edges, the number
+    of synapses, the sum of weights, the maximum single-edge weight, the
+    10/50/90 % quantiles of the weight distribution;
+  - aggregates for each of the six T38 types and for all MBON;
+  - the number A and the peak time of a single EPSP by the V1c-E3.1
+    formulas;
+  - the grid's upper bound s_max by the V1c-E3.1 formula;
+  - the V1c-E5 testability check: a T38 type with zero total weight across
+    all its cells makes the stage untestable by construction.
 
-Список выходов записан в штампе 0 до запуска и здесь не расширяется.
+The list of outputs is recorded in stamp 0 before the run and is not
+extended here.
 
-Запуск:  python v1c_weights.py
+Run:  python v1c_weights.py
 """
 from __future__ import annotations
 
@@ -35,17 +38,17 @@ STAMP0 = OUT / "stamp0_sha256.txt"
 
 
 def epsp_peak_factor(t_mbr_ms: float, tau_ms: float) -> tuple[float, float]:
-    """Множитель и время пика одиночного ВПСП (V1c-E3.1).
+    """Factor and peak time of a single EPSP (V1c-E3.1).
 
-    Модель [2] токовая: спайк добавляет вес w к переменной g, а мембрана
-    интегрирует g. Из dv/dt = (v_0 - v + g)/t_mbr и dg/dt = -g/tau при покое
-    одиночный спайк даёт отклонение
+    Model [2] is current-based: a spike adds weight w to variable g, and the
+    membrane integrates g. From dv/dt = (v_0 - v + g)/t_mbr and
+    dg/dt = -g/tau at rest, a single spike gives a deflection
         u(t) = w/(1 - rho) * (exp(-t/tau) - exp(-t/t_mbr)),  rho = t_mbr/tau,
-    пик которого достигается в t* и равен A*w.
+    whose peak is reached at t* and equals A*w.
     """
     rho = t_mbr_ms / tau_ms
     if abs(rho - 1.0) < 1e-12:
-        raise SystemExit("вырожденный случай t_mbr = tau: формула пика иная")
+        raise SystemExit("degenerate case t_mbr = tau: the peak formula is different")
     a = (1.0 / (rho - 1.0)) * (rho ** (-1.0 / (rho - 1.0))
                                - rho ** (-rho / (rho - 1.0)))
     t_star = tau_ms * t_mbr_ms * math.log(rho) / (t_mbr_ms - tau_ms)
@@ -55,8 +58,8 @@ def epsp_peak_factor(t_mbr_ms: float, tau_ms: float) -> tuple[float, float]:
 def main() -> int:
     if not STAMP0.exists():
         raise SystemExit(
-            "штамп 0 не найден: %s\nправило Д1 запрещает это измерение до "
-            "записи штампа 0" % STAMP0)
+            "stamp 0 not found: %s\nrule Д1 forbids this measurement before "
+            "stamp 0 is recorded" % STAMP0)
 
     import v1b_subcircuit as V
     from model import default_params as dp
@@ -66,9 +69,9 @@ def main() -> int:
     typ = dict(zip(neurons.root_id,
                    neurons.hemibrain_type.astype("string").fillna(V.UNTYPED)))
 
-    # Та же маска подмен, что у ступени: рёбра DAN->KC и DAN->MBON снимаются.
-    # На рёбра KC->MBON она влиять не должна, и это проверяется, а не
-    # предполагается.
+    # The same substitution mask as the stage's: DAN->KC and DAN->MBON edges
+    # are removed. It must not affect KC->MBON edges, and this is checked,
+    # not assumed.
     con_masked, n_masked = V.apply_dan_mask(con, role)
 
     def kc_mbon(c: pd.DataFrame) -> pd.DataFrame:
@@ -89,7 +92,7 @@ def main() -> int:
 
     a_peak, t_star_ms = epsp_peak_factor(t_mbr_ms, tau_ms)
 
-    # вес ребра при s = 1, в мВ приращения переменной g
+    # edge weight at s = 1, in mV of increment to variable g
     e = e.assign(w_mV=e["Excitatory x Connectivity"].to_numpy() * w_syn_mV)
 
     mbon_ids = sorted(i for i, r in role.items() if r == "MBON")
@@ -130,19 +133,20 @@ def main() -> int:
         by_type[t] = aggregate(ids)
     all_mbon = aggregate(mbon_ids)
 
-    # V1c-E5: тип, у всех клеток которого сумма весов нулевая, делает ступень
-    # непроверяемой по построению - никакое s не изменит нуля.
+    # V1c-E5: a type whose cells all have zero total weight makes the stage
+    # untestable by construction - no s will change a zero.
     untestable = [t for t, d in by_type.items()
                   if d["n_cells"] == 0 or d["sum_w_mV_total"] == 0.0]
 
-    # V1c-E3.1: верхняя граница сетки по s. Максимум берётся по клеткам шести
-    # типов T38; величина по всем MBON печатается отчётно и границы не задаёт.
+    # V1c-E3.1: the grid's upper bound over s. The maximum is taken over the
+    # cells of the six T38 types; the value over all MBON is printed for the
+    # record and does not set the bound.
     w_max_t38 = max(d["w_max_mV"] for d in by_type.values())
     s_max_t38 = theta_mV / (a_peak * w_max_t38) if w_max_t38 > 0 else None
     s_max_all = (theta_mV / (a_peak * all_mbon["w_max_mV"])
                  if all_mbon["w_max_mV"] > 0 else None)
 
-    # V1c-E3.2: узлы сетки. Порождаются формулой штампа 0, не выбором.
+    # V1c-E3.2: grid nodes. Generated by the stamp 0 formula, not by choice.
     n_dec = 4
     nodes = []
     if s_max_t38:
@@ -184,34 +188,34 @@ def main() -> int:
     p = OUT / "weights_kc_mbon.json"
     p.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    print("Измерение V1c-E6.1: структурные веса KC->MBON (симулятор не запускался)")
-    print("рёбер KC->MBON: %d; маска подмен их не касается: %s"
-          % (len(e), "да" if not mask_touches_kc_mbon else "НЕТ, разбирать"))
+    print("Measurement V1c-E6.1: structural KC->MBON weights (simulator not run)")
+    print("KC->MBON edges: %d; the substitution mask does not touch them: %s"
+          % (len(e), "yes" if not mask_touches_kc_mbon else "NO, look into it"))
     print("\n%-8s %6s %7s %9s %11s %11s %9s"
-          % ("тип", "клеток", "рёбер", "синапсов", "Σw, мВ", "мин Σw/кл", "w_max, мВ"))
+          % ("type", "cells", "edges", "synapses", "Σw, mV", "min Σw/cell", "w_max, mV"))
     for t, d in by_type.items():
         print("%-8s %6d %7d %9d %11.1f %11.1f %9.4f"
               % (t, d["n_cells"], d["n_edges_kc"], d["n_synapses_kc"],
                  d["sum_w_mV_total"], d["sum_w_mV_min_cell"], d["w_max_mV"]))
     print("%-8s %6d %7d %9d %11.1f %11.1f %9.4f"
-          % ("все MBON", all_mbon["n_cells"], all_mbon["n_edges_kc"],
+          % ("all MBON", all_mbon["n_cells"], all_mbon["n_edges_kc"],
              all_mbon["n_synapses_kc"], all_mbon["sum_w_mV_total"],
              all_mbon["sum_w_mV_min_cell"], all_mbon["w_max_mV"]))
 
-    print("\nОдиночный ВПСП: A = %.6f, пик в %.3f мс, порог θ = %.1f мВ"
+    print("\nSingle EPSP: A = %.6f, peak at %.3f ms, threshold θ = %.1f mV"
           % (a_peak, t_star_ms, theta_mV))
-    print("s_max по T38 = θ / (A · w_max) = %.1f / (%.6f · %.4f) = %.2f"
+    print("s_max over T38 = θ / (A · w_max) = %.1f / (%.6f · %.4f) = %.2f"
           % (theta_mV, a_peak, w_max_t38, s_max_t38))
-    print("отчётно, по всем MBON: w_max = %.4f мВ, s_max = %.2f"
+    print("for the record, over all MBON: w_max = %.4f mV, s_max = %.2f"
           % (all_mbon["w_max_mV"], s_max_all))
-    print("\nсетка по s: %d узлов, %d на декаду, от %.4g до %.4g"
+    print("\ngrid over s: %d nodes, %d per decade, from %.4g to %.4g"
           % (len(nodes), n_dec, nodes[0], nodes[-1]))
     print("  " + ", ".join("%.4g" % x for x in nodes))
-    print("\nтестируемость V1c-E5: %s"
-          % ("все шесть типов T38 имеют ненулевой вход KC - ступень проверяема"
+    print("\ntestability V1c-E5: %s"
+          % ("all six T38 types have nonzero KC input - the stage is testable"
              if not untestable else
-             "НЕПРОВЕРЯЕМА по построению для типов: " + ", ".join(untestable)))
-    print("\nзаписано: %s" % p)
+             "UNTESTABLE by construction for types: " + ", ".join(untestable)))
+    print("\nwritten: %s" % p)
     return 0
 
 

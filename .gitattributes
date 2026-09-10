@@ -1,47 +1,47 @@
-# Замороженные копии документов хранятся побайтово: их SHA-256 записан в
-# spec_sha256.txt как предрегистрация, и нормализация переводов строки сделала
-# бы хранимый файл отличным от того, который хэшировался.
+# Frozen document copies are stored byte-for-byte: their SHA-256 is recorded in
+# spec_sha256.txt as a pre-registration, and line-ending normalization would make
+# the stored file differ from the one that was hashed.
 results/**/*.frozen.md -text
 
-# То же относится к конфигам стенда и файлам хэшей: SHA-256 конфига записан в
-# spec_sha256.txt наравне с хэшем спецификации, поэтому нормализация переводов
-# строки сделала бы выданный на checkout файл отличным от хэшированного.
+# The same applies to the stand's configs and hash files: the config's SHA-256 is recorded in
+# spec_sha256.txt alongside the spec's hash, so line-ending
+# normalization would make the file checked out differ from the hashed one.
 results/**/config_v1b*.json -text
 results/**/spec_sha256.txt -text
 
-# Штамп 0 ступени V1c (правило Д1): его SHA-256 записан в stamp0_sha256.txt и
-# доказывает, что конструкция ступени старше до-хэшевых измерений. Нормализация
-# переводов строки лишила бы доказательство силы.
+# Stage 0 stamp of V1c (rule D1): its SHA-256 is recorded in stamp0_sha256.txt and
+# proves the stage's construction predates the pre-hash measurements. Line-ending
+# normalization would rob the proof of its force.
 results/**/*.stamp0.md -text
 results/**/stamp0_v1c.json -text
 results/**/stamp0_sha256.txt -text
 
-# Предрегистрация ступени V1c: байтовая копия спецификации подпадает под
-# правило *.frozen.md выше, хэши - под spec_sha256.txt. Конфиг ступени с пятью
-# каноническими узлами сетки и таблица детекторов хэшируются наравне с
-# спецификацией, поэтому нормализация переводов строки им тоже запрещена.
+# V1c stage pre-registration: the byte-identical spec copy falls under the
+# *.frozen.md rule above, hashes — under spec_sha256.txt. The stage config with the five
+# canonical grid nodes and the detector table are hashed alongside
+# the spec, so line-ending normalization is forbidden for them too.
 results/**/config_v1c*.json -text
 results/**/detector_table.json -text
 
-# План прогона ступени V1c и его SHA-256: план объявляется ДО запуска и
-# отчёт на него ссылается, поэтому он хэшируется наравне с конфигом, а
-# нормализация переводов строки сделала бы выданный файл отличным от
-# хэшированного.
+# V1c stage run plan and its SHA-256: the plan is declared BEFORE the run starts and
+# the report refers to it, so it is hashed alongside the config, and
+# line-ending normalization would make the file checked out differ from the
+# hashed one.
 results/**/run_plan.json -text
 results/**/run_plan_sha256.txt -text
 
-# Штамп классификации исхода V1c по литературе: объявляет правило до получения
-# ответа, его SHA-256 записан рядом, поэтому нормализация переводов строки
-# сделала бы выданный файл отличным от хэшированного.
+# V1c outcome classification stamp from the literature: it declares the rule before the
+# answer is obtained, its SHA-256 is recorded alongside, so line-ending
+# normalization would make the file checked out differ from the hashed one.
 results/**/kc_classification_stamp.json -text
 results/**/kc_classification_stamp_sha256.txt -text
 
-# Ворота выпуска ревизии v0.12: условия объявлены до проверок, хэш записан
-# рядом, поэтому нормализация переводов строки им запрещена.
+# Revision v0.12 release gate: the conditions are declared before the checks,
+# the hash is recorded alongside, so line-ending normalization is forbidden for it.
 results/**/release_gate_v012.json -text
 results/**/release_gate_v012_sha256.txt -text
 
-# Русские оригиналы документов хранятся побайтово: их SHA-256 записан в
-# docs/ru/sha256.txt, и нормализация переводов строки сделала бы хранимый файл
-# отличным от того, который хэшировался.
+# Russian document originals are stored byte-for-byte: their SHA-256 is recorded in
+# docs/ru/sha256.txt, and line-ending normalization would make the stored file
+# differ from the one that was hashed.
 docs/ru/*.ru.md -text

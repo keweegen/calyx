@@ -1,7 +1,7 @@
 #!/bin/sh
-# Запустить все восемь шардов стадии параллельно и дождаться их.
-# Восемь независимых процессов, а не multiprocessing.Pool: на этом venv Pool
-# встаёт в дедлок, воркеры висят на 0 % ЦП (см. заголовок run_v1b_grid.py).
+# Launch all eight shards of the stage in parallel and wait for them.
+# Eight independent processes, not multiprocessing.Pool: on this venv, Pool
+# deadlocks, workers hang at 0% CPU (see the header of run_v1b_grid.py).
 STAGE=${1:-1}
 N=${2:-8}
 i=0
@@ -10,4 +10,4 @@ while [ "$i" -lt "$N" ]; do
   i=$((i + 1))
 done
 wait
-echo "все $N шардов стадии $STAGE завершились"
+echo "all $N shards of stage $STAGE finished"

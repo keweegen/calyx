@@ -1,41 +1,44 @@
 # -*- coding: utf-8 -*-
-"""Прогонщик ступени V1c: третья ручка kc_mbon_scale на 285 трёхмерных точках.
+"""V1c stage runner: the third knob kc_mbon_scale over 285 three-dimensional points.
 
-Ступень предрегистрирована спецификацией v0.17 (хэш 636c49968a0866bd, разделы
-3з и 3и) вместе с конфигом config_v1c.json и таблицей детекторов
-detector_table.json. Прогонщик исполняет её и ничего в ней не решает.
+The stage is pre-registered by specification v0.17 (hash 636c49968a0866bd,
+sections 3з and 3и) together with the config_v1c.json config and the
+detector_table.json detector table. The runner executes it and decides
+nothing in it.
 
-Что делает прогон, всё - буквой замороженного текста:
+Everything the run does, to the letter of the frozen text:
 
-  сетка          57 кандидатов V1b' на пять узлов s, узлы читаются из конфига
-                 КАК СТРОКИ и во время исполнения не перевычисляются;
-  порядок        сначала все 57 точек узла s = 1, потом остальные 228; это
-                 закрывает сверку V1c-E7.3 за первый час, а не за третий;
-  доля           пересчитывается в каждой трёхмерной точке, а не наследуется
-                 (V1c-E3.3): обратная связь MBON->APL даёт 2,3 % входа APL, и
-                 инвариантность разреженности к s не установлена;
-  MBON           P14-M считается во ВСЕХ 285 точках, а не только в прошедших по
-                 доле: этого требует некритериальный выход V1c-E7.2 («для
-                 каждой трёхмерной точки сетки», около миллиона строк =
-                 285 x 97 x 36). В критерий входят только точки с
-                 candidate_at_s = true;
-  карта          расстояние до порога по-предъявленно, без временных трасс
+  grid           57 V1b' candidates over five nodes s, nodes are read from
+                 the config AS STRINGS and are not recomputed at runtime;
+  order          first all 57 points of node s = 1, then the remaining 228;
+                 this closes the V1c-E7.3 check within the first hour, not
+                 the third;
+  fraction       recomputed at every three-dimensional point, not inherited
+                 (V1c-E3.3): the MBON->APL feedback gives 2.3% of APL's
+                 input, and invariance of sparseness to s is not established;
+  MBON           P14-M is computed at ALL 285 points, not only at those that
+                 passed on the fraction: this is required by the
+                 non-criterial output V1c-E7.2 ("for every three-dimensional
+                 grid point", about a million rows = 285 x 97 x 36). Only
+                 points with candidate_at_s = true enter the criterion;
+  map            distance to threshold per presentation, without time traces
                  (V1c-E7.2);
-  сверка         на каждой точке узла s = 1 - побитовое сравнение с артефактами
-                 V1b' (V1c-E7.3); расхождение пишет HALT.json и закрывает
-                 ступень исходом NOT-TESTABLE.
+  reproduction   at every point of node s = 1 - a bitwise comparison against
+                 the V1b' artifacts (V1c-E7.3); a mismatch writes HALT.json
+                 and closes the stage with outcome NOT-TESTABLE.
 
-Три предпрогонные проверки исполняет каждый шард перед своей первой точкой:
-тест соответствия кода спецификации, пересчёт таблицы детекторов по весам
-своего загрузчика и структурный тест масштабирования на собранной сети. Смысл
-последних двух - «симулятор видит не те веса, по которым вычислен s_max», а это
-свойство процесса, а не текста, поэтому проверка идёт в каждом процессе.
+Every shard executes three pre-run checks before its first point: the test
+of code conformance to the specification, a recomputation of the detector
+table from its own loader's weights, and the structural scaling test on the
+assembled network. The point of the latter two is "the simulator sees
+different weights than the ones s_max was computed from" - a property of the
+process, not of the text, so the check runs in every process.
 
-Запуск:
-    python run_v1c_grid.py --plan                     # план точек и шардов
-    python run_v1c_grid.py --preflight                # три проверки, артефакт
-    python run_v1c_grid.py --pilot --codegen numpy    # пилот исполнения
-    run_shard_v1c.bat 0 8                             # и так для 0..7
+Run:
+    python run_v1c_grid.py --plan                     # plan of points and shards
+    python run_v1c_grid.py --preflight                # three checks, artifact
+    python run_v1c_grid.py --pilot --codegen numpy    # execution pilot
+    run_shard_v1c.bat 0 8                             # and so on for 0..7
     python run_v1c_grid.py --merge
 """
 from __future__ import annotations
@@ -79,25 +82,27 @@ def load_shard(p: Path) -> dict:
     return json.loads(p.read_text(encoding="utf-8"))
 
 
-# --- план прогона -------------------------------------------------------------
+# --- run plan -------------------------------------------------------------------
 def write_plan(n_shards: int) -> int:
-    """Порядок точек и назначение шардов, записанные ДО запуска.
+    """The order of points and the shard assignment, recorded BEFORE the run.
 
-    Не в config_v1c.json: тот заморожен вместе со спецификацией, его SHA-256
-    записан в spec_sha256.txt как часть предрегистрации, и дописать в него
-    что-либо значило бы сломать хэш. План - отдельный артефакт, объявляемый в
-    отчёте наравне с прочим объявленным до прогона.
+    Not in config_v1c.json: that one is frozen together with the
+    specification, its SHA-256 is recorded in spec_sha256.txt as part of
+    the pre-registration, and appending anything to it would mean breaking
+    the hash. The plan is a separate artifact, declared in the report on
+    par with everything else declared before the run.
     """
     import v1c_stage as S
 
     g = S.grid_3d()
     ns = S.nodes()
-    # Назначение шардов - по рангу точки ВНУТРИ её узла, со сдвигом на узел.
-    # Наивное «шард = индекс mod 8» на этом порядке вырождается: хвост идёт
-    # четвёрками узлов, 4 делит 8, и каждому шарду достаётся ровно один узел из
-    # четырёх. Тогда падение одного шарда теряет целый узел сетки, а исход по
-    # неполной сетке не выносится вовсе. Сдвиг на 3 (взаимно просто с 8)
-    # раскладывает 57 точек каждого узла по всем восьми шардам.
+    # Shard assignment - by the point's rank WITHIN its node, with an offset
+    # by node. The naive "shard = index mod 8" degenerates on this order:
+    # the tail runs in groups of four nodes, 4 divides 8, and each shard
+    # gets exactly one node out of four. Then losing one shard loses an
+    # entire grid node, and no outcome is rendered on an incomplete grid at
+    # all. An offset of 3 (coprime with 8) spreads each node's 57 points
+    # across all eight shards.
     rank = {}
     plan = []
     for k, (i, c, s_node) in enumerate(g):
@@ -107,31 +112,34 @@ def write_plan(n_shards: int) -> int:
         plan.append({"idx": k, "shard": shard, "cand_idx": i, "s_node": s_node,
                      "pn_kc_scale": c["pn_kc_scale"],
                      "g_apl_rel": c["g_apl_rel"]})
-    doc = {"stage": "V1c", "artefact_kind": "план прогона, объявлен до запуска",
+    doc = {"stage": "V1c", "artefact_kind": "run plan, declared before the run",
            "spec_hash_prefix": "636c49968a0866bd",
            "n_points": len(plan), "n_shards": n_shards,
-           "order": "сначала все 57 кандидатов на узле s = 1, затем 228 точек "
-                    "внешним циклом по кандидату и внутренним по четырём "
-                    "оставшимся узлам",
-           "shard_assignment": "по рангу точки внутри её узла со сдвигом 3 на "
-                               "номер узла, по модулю %d: каждый шард получает "
-                               "7-8 точек КАЖДОГО узла" % n_shards,
-           "shard_assignment_ground": "наивное «индекс mod %d» на этом порядке "
-                                      "вырождается: хвост идёт четвёрками "
-                                      "узлов, 4 делит %d, и шарду достаётся "
-                                      "ровно один узел из четырёх; падение "
-                                      "шарда теряло бы целый узел сетки, а "
-                                      "исход по неполной сетке не выносится"
+           "order": "first all 57 candidates at node s = 1, then 228 points "
+                    "in an outer loop over the candidate and an inner loop "
+                    "over the four remaining nodes",
+           "shard_assignment": "by the point's rank within its node with an "
+                               "offset of 3 on the node number, modulo %d: "
+                               "each shard gets 7-8 points of EVERY node"
+                               % n_shards,
+           "shard_assignment_ground": "the naive \"index mod %d\" degenerates "
+                                      "on this order: the tail runs in "
+                                      "groups of four nodes, 4 divides %d, "
+                                      "and a shard gets exactly one node out "
+                                      "of four; losing a shard would lose an "
+                                      "entire grid node, and no outcome is "
+                                      "rendered on an incomplete grid"
                                       % (n_shards, n_shards),
-           "order_ground": "V1c-E7.3 останавливает прогон на первом расхождении "
-                           "с V1b'; блок s = 1 первым закрывает все 57 сверок "
-                           "за первый час прогона",
-           "order_does_not_affect_numbers": "сеть строится заново на каждую "
-                                            "точку, зерно ставится на каждую "
-                                            "пробу, кэш cython у каждого шарда "
-                                            "свой; общие узлы стадий V1b', "
-                                            "посчитанные независимыми "
-                                            "процессами, совпали побитово",
+           "order_ground": "V1c-E7.3 stops the run at the first mismatch "
+                           "with V1b'; the s = 1 block closes all 57 checks "
+                           "first, within the first hour of the run",
+           "order_does_not_affect_numbers": "the network is rebuilt fresh "
+                                            "for every point, the seed is "
+                                            "set for every trial, each shard "
+                                            "has its own cython cache; the "
+                                            "shared V1b' stage nodes, "
+                                            "computed by independent "
+                                            "processes, matched bitwise",
            "points_per_shard": {str(k): sum(1 for p in plan if p["shard"] == k)
                                 for k in range(n_shards)},
            "points_per_shard_by_node": {
@@ -142,27 +150,28 @@ def write_plan(n_shards: int) -> int:
            "hashes": artefact_hashes(), "plan": plan}
     p = OUT / "run_plan.json"
     if p.exists():
-        print("план уже записан: %s. Перезапись запрещена: порядок объявляется "
-              "ДО запуска, и переписать его позже значило бы объявить его "
-              "задним числом." % p, file=sys.stderr)
+        print("plan already recorded: %s. Overwriting is forbidden: the "
+              "order is declared BEFORE the run, and rewriting it later "
+              "would mean declaring it after the fact." % p, file=sys.stderr)
         return 1
     p.write_text(json.dumps(doc, ensure_ascii=False, indent=2), encoding="utf-8")
     h = sha(p)
     (OUT / "run_plan_sha256.txt").write_text(
-        "# Порядок 285 точек и назначение шардов ступени V1c, объявленные ДО\n"
-        "# запуска прогона. Хэш записан здесь, а не в spec_sha256.txt: тот\n"
-        "# заморожен вместе со спецификацией, и дописать в него что-либо\n"
-        "# значило бы сломать предрегистрацию.\n#\n"
-        "# Дата записи: 2026-09-09\n"
+        "# The order of 285 points and the shard assignment of stage V1c,\n"
+        "# declared BEFORE the run starts. The hash is recorded here, not\n"
+        "# in spec_sha256.txt: that one is frozen together with the\n"
+        "# specification, and appending anything to it would mean breaking\n"
+        "# the pre-registration.\n#\n"
+        "# Date recorded: 2026-09-09\n"
         "run_plan.json %d %s\n" % (p.stat().st_size, h), encoding="utf-8")
-    print("план записан: %s\n%d точек, %d шардов, по шардам: %s\nхэш: %s"
+    print("plan recorded: %s\n%d points, %d shards, per shard: %s\nhash: %s"
           % (p, len(plan), n_shards,
              ", ".join("%s:%d" % kv for kv in doc["points_per_shard"].items()),
              h[:16]))
     return 0
 
 
-# --- предпрогонные проверки ---------------------------------------------------
+# --- pre-run checks ---------------------------------------------------------
 def run_preflight(neurons=None, con=None, write: bool = True) -> dict:
     import v1b_subcircuit as V
     import v1c_stage as S
@@ -178,16 +187,16 @@ def run_preflight(neurons=None, con=None, write: bool = True) -> dict:
         OUT.mkdir(parents=True, exist_ok=True)
         (OUT / "preflight.json").write_text(
             json.dumps(res, ensure_ascii=False, indent=2), encoding="utf-8")
-        print("предпрогонные проверки записаны: %s (отпечаток %s)"
+        print("pre-run checks recorded: %s (fingerprint %s)"
               % (OUT / "preflight.json", res["fingerprint"]))
     return res
 
 
-# --- одна трёхмерная точка ----------------------------------------------------
+# --- one three-dimensional point -----------------------------------------------
 def evaluate_3d(V, S, neurons, con, cand_idx: int, cand: dict, s_node: str):
-    """Одна точка: доля при P14, отклик MBON при P14-M, карта расстояния.
+    """One point: the fraction at P14, the MBON response at P14-M, the threshold map.
 
-    Возвращает (точка, кадр карты, число аномалий «d = 0 без спайка»).
+    Returns (point, map frame, number of "d = 0 without a spike" anomalies).
     """
     s = float(s_node)
     pt = V.evaluate_point(neurons, con, V.PANEL_CAL,
@@ -197,7 +206,8 @@ def evaluate_3d(V, S, neurons, con, cand_idx: int, cand: dict, s_node: str):
     pt.pop("_by_odor")
     pt["cand_idx"] = cand_idx
     pt["s_node"] = s_node
-    # ограничение по доле пересчитано в этой трёхмерной точке, а не унаследовано
+    # the fraction constraint is recomputed at this three-dimensional point,
+    # not inherited
     pt["candidate_at_s"] = bool(V.passes_fraction(pt))
 
     m = V.eval_p14m(neurons, con, pn_kc_scale=cand["pn_kc_scale"],
@@ -215,17 +225,17 @@ def evaluate_3d(V, S, neurons, con, cand_idx: int, cand: dict, s_node: str):
     return pt, df, S.zero_without_spike(by, neurons)
 
 
-# --- пилот исполнения ---------------------------------------------------------
+# --- execution pilot -------------------------------------------------------------
 def run_pilot(a) -> int:
-    """Одна точка s = 1 с наблюдателем и без; сверка поездов и полей E7.3.
+    """One point s = 1 with and without the observer; comparing trains and E7.3 fields.
 
-    Пилот первой точкой прогона не считается: он ничего не записывает в карту
-    ступени и ни одной величины расстояния до порога не сохраняет. Его
-    назначение - поймать неинертность наблюдателя за двенадцать минут, а не
-    через час прогона, и сделать это на уровне спайковых ПОЕЗДОВ - того, чего
-    V1c-E7.3 дать не может: у V1b' заморожены агрегаты, а не поезда.
-    Сравниваются индексы клеток и времена спайков всех 72 предъявлений обоих
-    таймингов на наборе C, затем счётчики в окне измерения.
+    The pilot is not counted as the run's first point: it writes nothing
+    into the stage map and saves not a single distance-to-threshold value.
+    Its purpose is to catch observer non-inertness within twelve minutes,
+    not an hour into the run, and to do so at the level of spike TRAINS -
+    something V1c-E7.3 cannot provide: V1b' has aggregates frozen, not
+    trains. Cell indices and spike times of all 72 presentations of both
+    timings on set C are compared, then the counts in the measurement window.
     """
     import numpy as np
     import v1b_subcircuit as V
@@ -237,11 +247,11 @@ def run_pilot(a) -> int:
     cand = S.candidates()[0]
     kw = dict(pn_kc_scale=cand["pn_kc_scale"],
               g_apl_rel=cand["g_apl_rel"] * V.g_ref_value())
-    print("пилот: кандидат 0, pn_kc_scale %r, g_apl_rel %r"
+    print("pilot: candidate 0, pn_kc_scale %r, g_apl_rel %r"
           % (cand["pn_kc_scale"], cand["g_apl_rel"]), flush=True)
 
     trains, counts, n_spikes = {}, {}, {}
-    for tag, rec in (("без наблюдателя", False), ("с наблюдателем", True)):
+    for tag, rec in (("without observer", False), ("with observer", True)):
         t0 = time.time()
         got_t, got_c, tot = {}, {}, 0
         for timing, pulse, win, seed in (("P14", V.T_PULSE_MS, V.T_WINDOW_MS,
@@ -260,7 +270,7 @@ def run_pilot(a) -> int:
                     got_t[(timing, o, k)] = (ii, tt)
                     tot += len(ii)
         counts[rec], trains[rec], n_spikes[rec] = got_c, got_t, tot
-        print("  %s: %.0f с, предъявлений %d, спайков %d"
+        print("  %s: %.0f s, presentations %d, spikes %d"
               % (tag, time.time() - t0, len(got_t), tot), flush=True)
 
     keys = sorted(trains[False], key=str)
@@ -272,14 +282,14 @@ def run_pilot(a) -> int:
                  for k in counts[False])
     same = same_t and same_c
     n_pres = len(keys)
-    print("пилот: поезда на %d предъявлениях (%d спайков) — %s; счётчики — %s"
+    print("pilot: trains on %d presentations (%d spikes) — %s; counts — %s"
           % (n_pres, n_spikes[False],
-             "совпадают побитово" if same_t else "РАСХОДЯТСЯ",
-             "совпадают" if same_c else "РАСХОДЯТСЯ"), flush=True)
+             "match bitwise" if same_t else "DIVERGE",
+             "match" if same_c else "DIVERGE"), flush=True)
 
-    doc = {"check": "пилот исполнения перед прогоном V1c",
-           "status": "пройден" if same else "ПРОВАЛЕН",
-           "ground": "инертность наблюдателя vmax на реальном пути ступени",
+    doc = {"check": "execution pilot before the V1c run",
+           "status": "passed" if same else "FAILED",
+           "ground": "vmax observer inertness on the stage's real path",
            "candidate": {"cand_idx": 0, "pn_kc_scale": cand["pn_kc_scale"],
                          "g_apl_rel": cand["g_apl_rel"]},
            "n_presentations_compared": n_pres,
@@ -287,21 +297,21 @@ def run_pilot(a) -> int:
            "timings": ["P14", "P14-M"], "panel": "C",
            "spike_trains_identical": bool(same_t),
            "spike_counts_identical": bool(same_c),
-           "compared": "индексы клеток и времена спайков каждого предъявления, "
-                       "затем счётчики в окне измерения",
+           "compared": "cell indices and spike times of every presentation, "
+                       "then the counts in the measurement window",
            "vmax_values_written": False,
-           "note": "значения vmax пилота не записываются: объявленная до "
-                   "прогона часть отчёта не содержит ничего о расстоянии до "
-                   "порога",
+           "note": "the pilot's vmax values are not recorded: the part of "
+                   "the report declared before the run contains nothing "
+                   "about distance to threshold",
            "hashes": artefact_hashes()}
     PRERUN.mkdir(parents=True, exist_ok=True)
     (PRERUN / "pilot_s1.json").write_text(
         json.dumps(doc, ensure_ascii=False, indent=2), encoding="utf-8")
-    print("записано: %s" % (PRERUN / "pilot_s1.json"))
+    print("recorded: %s" % (PRERUN / "pilot_s1.json"))
     return 0 if same else 1
 
 
-# --- шард ---------------------------------------------------------------------
+# --- shard -----------------------------------------------------------------------
 def run_shard(a) -> int:
     import pandas as pd
     from brian2 import prefs
@@ -315,22 +325,23 @@ def run_shard(a) -> int:
     import v1c_stage as S
 
     if S.halted():
-        print("прогон остановлен сигналом %s: %s"
+        print("run stopped by signal %s: %s"
               % (S.HALT, S.halted()["reason"]), file=sys.stderr)
         return 1
 
     neurons, con = V.load_substrate()
     pre = run_preflight(neurons, con, write=False)
 
-    # Порядок и нарезка берутся из плана: он объявлен до запуска и захэширован,
-    # а пересчёт нарезки в прогонщике позволил бы ей молча разойтись с планом.
+    # The order and the split are taken from the plan: it is declared before
+    # the run and hashed, and recomputing the split in the runner would let
+    # it silently diverge from the plan.
     plan_p = OUT / "run_plan.json"
     if not plan_p.exists():
-        print("план прогона не записан: запустите --plan", file=sys.stderr)
+        print("run plan not recorded: run --plan", file=sys.stderr)
         return 1
     plan = json.loads(plan_p.read_text(encoding="utf-8"))
     if plan["n_shards"] != a.of:
-        print("план записан на %d шардов, запрошено %d"
+        print("plan recorded for %d shards, %d requested"
               % (plan["n_shards"], a.of), file=sys.stderr)
         return 1
     cands = S.candidates()
@@ -348,14 +359,14 @@ def run_shard(a) -> int:
     todo = [(k, t) for k, t in mine if (t[0], t[2]) not in done]
     if a.limit:
         todo = todo[:a.limit]
-    print("шард %d из %d: точек %d, посчитано %d, к прогону %d, codegen %s"
+    print("shard %d of %d: points %d, computed %d, to run %d, codegen %s"
           % (a.shard, a.of, len(mine), len(done), len(todo), a.codegen),
           flush=True)
 
     frames = [pd.read_parquet(mpath)] if mpath.exists() else []
     for n, (k, (i, c, s_node)) in enumerate(todo, 1):
         if S.halted():
-            print("сигнал остановки получен, шард прекращает работу",
+            print("stop signal received, shard is halting",
                   file=sys.stderr)
             return 1
         t0 = time.time()
@@ -365,12 +376,12 @@ def run_shard(a) -> int:
 
         if s_node == "1":
             diffs = S.reproduction_check(pt)
-            pt["reproduction_v1b_prime"] = "совпадение" if not diffs else diffs
+            pt["reproduction_v1b_prime"] = "match" if not diffs else diffs
             if diffs:
-                S.halt("V1c-E7.3: расхождение с артефактами V1b' на узле s = 1",
+                S.halt("V1c-E7.3: mismatch with the V1b' artifacts at node s = 1",
                        {"cand_idx": i, "pn_kc_scale": c["pn_kc_scale"],
                         "g_apl_rel": c["g_apl_rel"], "fields": diffs})
-                print("V1c-E7.3 ПРОВАЛЕНА в точке %d: %s"
+                print("V1c-E7.3 FAILED at point %d: %s"
                       % (i, "; ".join(diffs[:5])), file=sys.stderr)
                 return 1
 
@@ -381,23 +392,23 @@ def run_shard(a) -> int:
         pd.concat(frames, ignore_index=True).to_parquet(mpath, index=False)
 
         m = pt["mbon"]
-        tail = ("кандидат при s" if pt["candidate_at_s"] else "по доле не прошла")
+        tail = ("candidate at s" if pt["candidate_at_s"] else "did not pass on the fraction")
         if pt["candidate_at_s"]:
             broke = [nm for nm, ok in (("3.3", m["floor_ok"]),
                                        ("3.4", m["ceiling_ok"]),
                                        ("3.5", m["md_ok"])) if not ok]
-            tail += ", ДОПУСТИМА" if not broke else ", нарушено " + ",".join(broke)
-        print("  [%d/%d] точка %d: кандидат %d, s %s -> f %.4f, min R_t %.4f, "
-              "max R_t %.4f, %.0f c; %s"
+            tail += ", ADMISSIBLE" if not broke else ", violated " + ",".join(broke)
+        print("  [%d/%d] point %d: candidate %d, s %s -> f %.4f, min R_t %.4f, "
+              "max R_t %.4f, %.0f s; %s"
               % (n, len(todo), k, i, s_node, pt["f_mean"],
                  min((v["R_t"] for v in m["per_type"].values()), default=float("nan")),
                  max((v["R_t"] for v in m["per_type"].values()), default=float("nan")),
                  pt["wall_s"], tail), flush=True)
-    print("шард %d готов" % a.shard, flush=True)
+    print("shard %d ready" % a.shard, flush=True)
     return 0
 
 
-# --- сборка -------------------------------------------------------------------
+# --- merge -----------------------------------------------------------------------
 def merge(a) -> int:
     import pandas as pd
     import v1b_subcircuit as V
@@ -405,9 +416,9 @@ def merge(a) -> int:
 
     h = S.halted()
     if h:
-        print("прогон остановлен сигналом %s: %s" % (S.HALT, h["reason"]),
+        print("run stopped by signal %s: %s" % (S.HALT, h["reason"]),
               file=sys.stderr)
-        print("исход ступени — %s, основание: %s" % (h["outcome"], h["ground"]),
+        print("stage outcome — %s, ground: %s" % (h["outcome"], h["ground"]),
               file=sys.stderr)
         return 1
 
@@ -423,20 +434,20 @@ def merge(a) -> int:
                 pts.append(pt)
     pts.sort(key=lambda p: (p["cand_idx"], float(p["s_node"])))
     grid = S.grid_3d()
-    print("собрано точек: %d из %d" % (len(pts), len(grid)))
+    print("points collected: %d of %d" % (len(pts), len(grid)))
 
     fps = {h.get("preflight_fingerprint") for h in heads if h}
-    print("отпечатков предпрогонных проверок среди шардов: %d %s"
+    print("pre-run check fingerprints among shards: %d %s"
           % (len(fps), sorted(x for x in fps if x)))
     if len(fps) > 1:
-        print("шарды прогонялись при разных предпрогонных проверках — "
-              "это ошибка исполнения", file=sys.stderr)
-        S.halt("отпечатки предпрогонных проверок шардов различаются", sorted(fps))
+        print("shards were run under different pre-run checks — "
+              "this is an execution error", file=sys.stderr)
+        S.halt("shards' pre-run check fingerprints differ", sorted(fps))
 
     (OUT / "v1c_grid.json").write_text(
         json.dumps(pts, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    # V1c-E7.3 повторно, над собранным артефактом: запись для отчёта
+    # V1c-E7.3 again, over the assembled artifact: recorded for the report
     repro, bad = [], []
     for pt in pts:
         if pt["s_node"] != "1":
@@ -445,10 +456,10 @@ def merge(a) -> int:
         repro.append({"cand_idx": pt["cand_idx"], "diffs": d})
         if d:
             bad.append(pt["cand_idx"])
-    print("V1c-E7.3 при сборке: сверено %d точек узла s = 1, расхождений в %d"
+    print("V1c-E7.3 at merge: %d points of node s = 1 checked, mismatches in %d"
           % (len(repro), len(bad)))
 
-    # карта расстояния до порога
+    # threshold distance map
     frames = [pd.read_parquet(p) for p in sorted(OUT.glob("threshold_map.shard*.parquet"))]
     summ = None
     if frames:
@@ -456,17 +467,17 @@ def merge(a) -> int:
         df = df.drop_duplicates(["cand_idx", "s_node", "mbon_id", "run", "odor",
                                  "trial"])
         df.to_parquet(OUT / "threshold_map.parquet", index=False)
-        print("карта расстояния до порога: %d строк -> %s"
+        print("threshold distance map: %d rows -> %s"
               % (len(df), OUT / "threshold_map.parquet"))
         summ = S.threshold_summary(df)
         (OUT / "threshold_map_summary.json").write_text(
             json.dumps(summ, ensure_ascii=False, indent=2), encoding="utf-8")
 
     if len(pts) < len(grid):
-        print("сетка не полна — исход не выносится")
+        print("grid is not complete — no outcome is rendered")
         return 0
     if any(p.get("mbon") is None for p in pts):
-        print("у части точек отклик MBON не вычислялся: исход не выносится",
+        print("MBON response was not computed for some points: no outcome is rendered",
               file=sys.stderr)
         return 1
 
@@ -477,25 +488,25 @@ def merge(a) -> int:
     res["zero_without_spike_total"] = sum(p.get("zero_without_spike", 0) for p in pts)
     res["hashes"] = artefact_hashes()
     if bad:
-        # V1c-E7.3: расхождение с V1b' на узле s = 1 закрывает ступень
-        # исходом NOT-TESTABLE, а не FAIL: оно есть утверждение об исполнении,
-        # а не о семействе
+        # V1c-E7.3: a mismatch with V1b' at node s = 1 closes the stage with
+        # outcome NOT-TESTABLE, not FAIL: it is a statement about execution,
+        # not about the model family
         res["outcome_before_reproduction_check"] = res["outcome"]
         res["outcome"] = "NOT-TESTABLE"
-        res["ground"] = ("ошибка исполнения: проверка воспроизведения V1c-E7.3 "
-                         "не прошла в %d точках узла s = 1" % len(bad))
-        res["stopping_rule"] = "не выводится: исход ступени не получен"
+        res["ground"] = ("execution error: the V1c-E7.3 reproduction check "
+                         "did not pass at %d points of node s = 1" % len(bad))
+        res["stopping_rule"] = "not derived: no stage outcome was obtained"
     res["headline"] = _headline(V, pts)
     (OUT / "report_map.json").write_text(
         json.dumps({"summary": res, "points": pts}, ensure_ascii=False, indent=2),
         encoding="utf-8")
 
-    print("\nисход ступени V1c: %s" % res["outcome"])
-    print("  основание: %s" % res["ground"])
-    print("  точек, прошедших по доле при своём s: %d из %d"
+    print("\nstage V1c outcome: %s" % res["outcome"])
+    print("  ground: %s" % res["ground"])
+    print("  points passing on the fraction at their own s: %d of %d"
           % (res["n_in_K"], res["n_points"]))
-    print("  полоса: %s" % (res.get("band") if res.get("band") else "пуста"))
-    print("  проверка «d = 0 без спайка»: %d при ожидании 0"
+    print("  band: %s" % (res.get("band") if res.get("band") else "empty"))
+    print("  \"d = 0 without a spike\" check: %d, expected 0"
           % res["zero_without_spike_total"])
     for k, v in res["headline"].items():
         print("  %s: %s" % (k, v))
@@ -503,7 +514,7 @@ def merge(a) -> int:
 
 
 def _headline(V, pts: list[dict]) -> dict:
-    """Заголовочные величины исхода, считаемые по точкам множества K."""
+    """Headline outcome values, computed over the points of set K."""
     k = [p for p in pts if p.get("candidate_at_s")]
     out = {"n_in_K_by_node": {}}
     for s in sorted({p["s_node"] for p in pts}, key=float):
@@ -537,7 +548,7 @@ def main() -> int:
     os.environ.setdefault("PYTHONIOENCODING", "utf-8")
     os.environ["CALYX_V1B_OUT"] = str(OUT)
     if not (OUT / "spec_sha256.txt").exists():
-        print("предрегистрация не заморожена", file=sys.stderr)
+        print("pre-registration is not frozen", file=sys.stderr)
         return 1
     if a.plan:
         return write_plan(a.of)

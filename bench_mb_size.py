@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
-"""Нужен ли Cython-бэкенд для сети размера шага 1?
+"""Is the Cython backend needed for a network the size of step 1?
 
-Строит LIF-сеть масштаба подсхемы грибовидного тела (около 2000 KC на полушарие,
-34 MBON, ~100 DAN по [8], [9]) с той же динамикой, что в модели [2], и меряет
-время симуляции 1 с модельного времени на бэкенде numpy.
+Builds an LIF network at the scale of the mushroom-body subcircuit (about 2000 KC per
+hemisphere, 34 MBON, ~100 DAN per [8], [9]) with the same dynamics as in model [2], and
+measures the simulation time for 1 s of model time on the numpy backend.
 
-Для сравнения — тот же замер на сети масштаба полного мозга не делается: он уже
-есть из прогонов V0 (около 57 с на 5 параллельных трайлов по 1000 мс).
+For comparison, the same measurement on a whole-brain-scale network is not made: it
+already exists from the V0 runs (about 57 s for 5 parallel trials of 1000 ms).
 
-Запуск:  .venv/Scripts/python.exe bench_mb_size.py
+Run:  .venv/Scripts/python.exe bench_mb_size.py
 """
 import time
 from brian2 import (
@@ -18,7 +18,7 @@ from brian2 import (
 
 print("codegen.target =", repr(prefs["codegen.target"]))
 
-# Константы динамики — как в model.py репозитория [2]
+# Dynamics constants — as in model.py of repository [2]
 V_0, V_RST, V_TH = -52 * mV, -52 * mV, -45 * mV
 T_MBR, TAU, T_RFC, T_DLY = 20 * ms, 5 * ms, 2.2 * ms, 1.8 * ms
 W_SYN = 0.275 * mV
@@ -29,7 +29,7 @@ dg/dt = -g / tau              : volt (unless refractory)
 rfc                           : second
 """
 
-# Размеры подсхемы: KC, MBON, DAN
+# Subcircuit sizes: KC, MBON, DAN
 N_KC, N_MBON, N_DAN = 2000, 34, 100
 N = N_KC + N_MBON + N_DAN
 
@@ -46,9 +46,9 @@ def build_and_run(t_sim=1 * second, seed_conn=0):
     neu.rfc = T_RFC
 
     syn = Synapses(neu, neu, "w : volt", on_pre="g += w", delay=T_DLY)
-    # KC -> MBON: плотный слой, в котором в шаге 1 живёт пластичность
+    # KC -> MBON: dense layer, where plasticity lives in step 1
     syn.connect(condition="i < %d and j >= %d and j < %d" % (N_KC, N_KC, N_KC + N_MBON))
-    # MBON -> DAN: обратная связь шага 2
+    # MBON -> DAN: step 2 feedback
     syn.connect(condition="i >= %d and i < %d and j >= %d"
                 % (N_KC, N_KC + N_MBON, N_KC + N_MBON))
     syn.w = W_SYN
@@ -63,16 +63,16 @@ def build_and_run(t_sim=1 * second, seed_conn=0):
     return dt, len(syn), mon.num_spikes
 
 
-print("сеть: %d нейронов (KC %d, MBON %d, DAN %d)" % (N, N_KC, N_MBON, N_DAN))
+print("network: %d neurons (KC %d, MBON %d, DAN %d)" % (N, N_KC, N_MBON, N_DAN))
 wall, n_syn, n_spk = build_and_run()
-print("синапсов: %d" % n_syn)
-print("спайков за 1 с модельного времени: %d" % n_spk)
+print("synapses: %d" % n_syn)
+print("spikes over 1 s of model time: %d" % n_spk)
 print()
-print("время симуляции 1 с модельного времени: %.2f с" % wall)
-print("реальное время / модельное:            %.1fx" % wall)
+print("simulation time for 1 s of model time: %.2f s" % wall)
+print("wall time / model time:                %.1fx" % wall)
 print()
-n_runs = 30 * 6           # 30 повторов на условие, порядок шести условий/контролей
-print("оценка для %d прогонов по 1 с последовательно: %.0f с (%.1f мин)"
+n_runs = 30 * 6           # 30 repeats per condition, order of six conditions/controls
+print("estimate for %d runs of 1 s sequentially: %.0f s (%.1f min)"
       % (n_runs, wall * n_runs, wall * n_runs / 60))
-print("при 8 параллельных процессах:                 %.0f с (%.1f мин)"
+print("with 8 parallel processes:                    %.0f s (%.1f min)"
       % (wall * n_runs / 8, wall * n_runs / 8 / 60))

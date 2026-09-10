@@ -1,26 +1,25 @@
 # -*- coding: utf-8 -*-
-"""V1a лестницы валидации: подсхема грибовидного тела против полной модели [2].
+"""V1a of the validation ladder: mushroom-body subcircuit against the full model [2].
 
-Три части, все по спецификации v0.9, разделы 3а, 3г и 6.
+Three parts, all per specification v0.9, sections 3а, 3г and 6.
 
-1. Тождество субстрата. Рёбра подсхемы и их веса совпадают с рёбрами полной
-   модели, ограниченными на то же множество нейронов. Допуск нулевой.
+1. Substrate identity. Subcircuit edges and their weights match the edges of the
+   full model restricted to the same set of neurons. The tolerance is zero.
 
-2. Тождество отклика при воспроизведённом внешнем входе. Полная модель [2]
-   прогоняется со стимуляцией PN и записывает спайки всех нейронов. Затем
-   прогоняется ядро подсхемы (KC, MBON, DAN, APL), и каждому его нейрону
-   подаются спайки всех внешних пресинаптических партнёров, взятые из записи
-   полной модели, с весами из того же коннектома. Проекционные нейроны тоже
-   воспроизводятся, а не стимулируются. Подсхема при этом детерминирована;
-   порог — не менее 99 % нейронов ядра с совпавшим спайковым поездом с
-   точностью до шага интегрирования, у остальных расхождение не более
-   одного спайка.
+2. Response identity under replayed external input. The full model [2] is run
+   with PN stimulation and records the spikes of all neurons. Then the
+   subcircuit core (KC, MBON, DAN, APL) is run, and each of its neurons receives
+   the spikes of all external presynaptic partners, taken from the full model's
+   recording, with weights from the same connectome. Projection neurons are also
+   replayed, not stimulated. The subcircuit is thereby deterministic; the
+   threshold is at least 99% of core neurons with a spike train matching to the
+   integration step, and for the rest a discrepancy of at most one spike.
 
-3. Проверки декодера. Первая — согласованность знака. Вторая — индекс на
-   наивных входах в допуске 0,01. Третья не выполняется: она зависит от
-   источника PN-паттернов, отложенного до V1b (спецификация, раздел 3а).
+3. Decoder checks. The first is sign consistency. The second is the index on
+   naive inputs within a tolerance of 0.01. The third is not run: it depends on
+   the source of PN patterns, deferred to V1b (specification, section 3а).
 
-Запуск:  .venv/Scripts/python.exe v1a_subcircuit.py [--quick]
+Run:  .venv/Scripts/python.exe v1a_subcircuit.py [--quick]
 """
 from __future__ import annotations
 
@@ -46,10 +45,10 @@ QUICK = "--quick" in sys.argv
 N_RUN = 3 if QUICK else 10
 T_RUN_MS = 1000
 
-# Наборы запахов и критерий второй проверки декодера — спецификация, раздел 3г.
-# Пятнадцать выборок по 30 унигломерулярных ALPN правого полушария: десять
-# калибровочных, пять оценочных. Зёрна объявлены до прогона; выборки odor1..odor4
-# прогона v0.8 не переиспользуются — они уже наблюдались.
+# Odor sets and the second decoder check criterion — specification, section 3г.
+# Fifteen draws of 30 uniglomerular ALPN of the right hemisphere: ten
+# calibration, five evaluation. Seeds are declared before the run; the odor1..odor4
+# draws of the v0.8 run are not reused — they have already been observed.
 FREQS = [20, 100]
 SEED_UPN30 = 20260907
 N_UPN30 = 30
@@ -65,22 +64,22 @@ CONDITIONS = (
     [(o, 100) for o in CALIB_ODORS[:3] + EVAL_ODORS[:2]] + [("silence", 0)]
 )
 
-# Пороги критерия. Константа 0,01 унаследована из v0.7 (четверть от эффекта 0,038
-# по [29]) и не пересматривалась; изменилась величина, которую она ограничивает.
-NULL_LOCATION_TOL = 0.01       # условие 1: |mu_null|
-ZBAR_TOL = 2.0                 # условие 2: |z| среднего пяти оценочных запахов
-NULL_SCALE_TOL = 0.0095        # условие 3: sigma_null, четверть от 0,038
-EFFECT_SIZE = 0.038            # сдвиг индекса при депрессии одного типа на 80 % [29]
+# Criterion thresholds. The constant 0.01 is inherited from v0.7 (a quarter of the
+# effect size 0.038 per [29]) and was not revised; what changed is the quantity it bounds.
+NULL_LOCATION_TOL = 0.01       # condition 1: |mu_null|
+ZBAR_TOL = 2.0                 # condition 2: |z| of the mean of five evaluation odors
+NULL_SCALE_TOL = 0.0095        # condition 3: sigma_null, a quarter of 0.038
+EFFECT_SIZE = 0.038            # index shift from an 80% depression of one type [29]
 
-PASS_FRACTION = 0.99           # порог доли совпавших поездов
+PASS_FRACTION = 0.99           # threshold on the fraction of matching trains
 PASS_MAX_EXTRA_SPIKES = 1
 
-# Группы декодера по таблице 1 [30]; вес типа = 1/N внутри группы.
+# Decoder groups per table 1 [30]; type weight = 1/N within the group.
 AVOID = ["MBON%02d" % i for i in (1, 2, 3, 4, 5, 6)]
 APPROACH = ["MBON%02d" % i for i in (9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19)]
 
 
-# --- часть 1: тождество субстрата --------------------------------------------
+# --- part 1: substrate identity --------------------------------------------
 def check_substrate(neurons: pd.DataFrame) -> dict:
     con = pd.read_parquet(PATH_CON)
     sel = set(neurons.root_id.astype("int64"))
@@ -93,7 +92,7 @@ def check_substrate(neurons: pd.DataFrame) -> dict:
     same_index = a.index.equals(b.index)
     n_diff = int((~a.eq(b)).sum()) if same_index else -1
 
-    # перенумерация: индексы подсхемы должны быть биекцией на порядок completeness
+    # reindexing: subcircuit indices must be a bijection onto the completeness order
     comp = pd.read_csv(SUB / "completeness.csv", index_col=0)
     idx = {fid: k for k, fid in enumerate(comp.index.astype("int64"))}
     bad_i = int((got.Presynaptic_ID.map(idx) != got.Presynaptic_Index).sum())
@@ -112,9 +111,9 @@ def check_substrate(neurons: pd.DataFrame) -> dict:
     return res
 
 
-# --- вход PN ------------------------------------------------------------------
+# --- PN input ------------------------------------------------------------------
 def pn_sets(neurons: pd.DataFrame) -> dict[str, list[int]]:
-    """Наборы входов. Выборки одного размера, зёрна объявлены до прогона."""
+    """Input sets. Draws of one size, seeds declared before the run."""
     pn = neurons[(neurons.mb_role == "PN") & (neurons.cell_sub_class == "uniglomerular")]
     right = np.array(sorted(pn[pn.side == "right"].root_id.astype("int64").tolist()))
     sets: dict[str, list[int]] = {"uPN_right": right.tolist(), "silence": []}
@@ -124,9 +123,9 @@ def pn_sets(neurons: pd.DataFrame) -> dict[str, list[int]]:
     return sets
 
 
-# --- часть 2: прогоны ---------------------------------------------------------
+# --- part 2: runs ---------------------------------------------------------
 def n_proc_by_memory() -> int:
-    """Число воркеров по доступной памяти (та же причина, что в v0_sugar.py)."""
+    """Number of workers based on available memory (same reason as in v0_sugar.py)."""
     import ctypes, os
 
     class MS(ctypes.Structure):
@@ -147,14 +146,14 @@ def n_proc_by_memory() -> int:
 
 
 def run_full(name: str, exc: list[int], rate_hz: int) -> Path:
-    """Прогон полной модели [2] кодом форка без изменений."""
+    """Run of the full model [2] with the fork's code, unchanged."""
     from brian2 import Hz, ms
     from model import run_exp, default_params
 
     RUNS.mkdir(parents=True, exist_ok=True)
     path = RUNS / ("%s.parquet" % name)
     if path.exists():
-        print("   %s: уже посчитан" % name)
+        print("   %s: already computed" % name)
         return path
     params = dict(default_params)
     params["t_run"] = T_RUN_MS * ms
@@ -167,11 +166,11 @@ def run_full(name: str, exc: list[int], rate_hz: int) -> Path:
 
 
 def run_replay(core_ids: list[int], full_spikes: pd.DataFrame) -> pd.DataFrame:
-    """Ядро подсхемы с воспроизведённым внешним входом. Возвращает спайки.
+    """Subcircuit core with replayed external input. Returns spikes.
 
-    Внешним считается всякий пресинаптический партнёр нейрона ядра, не входящий
-    в ядро, — в том числе PN. Его спайки берутся из записи полной модели того же
-    трайла, поэтому случайности в прогоне не остаётся.
+    Any presynaptic partner of a core neuron that is not itself in the core is
+    considered external — PN included. Its spikes are taken from the full
+    model's recording of the same trial, so no randomness remains in the run.
     """
     from brian2 import (NeuronGroup, Synapses, SpikeGeneratorGroup, SpikeMonitor,
                         Network, ms, mV, second, defaultclock)
@@ -183,7 +182,7 @@ def run_replay(core_ids: list[int], full_spikes: pd.DataFrame) -> pd.DataFrame:
     inner = onto_core[onto_core.Presynaptic_ID.isin(core)]
     outer = onto_core[~onto_core.Presynaptic_ID.isin(core)]
     ext_ids = sorted(set(outer.Presynaptic_ID.astype("int64")))
-    print("   ядро %d нейронов, внутренних рёбер %d, внешних партнёров %d, внешних рёбер %d"
+    print("   core %d neurons, internal edges %d, external partners %d, external edges %d"
           % (len(core_ids), len(inner), len(ext_ids), len(outer)))
 
     ci = {f: k for k, f in enumerate(core_ids)}
@@ -218,17 +217,18 @@ def run_replay(core_ids: list[int], full_spikes: pd.DataFrame) -> pd.DataFrame:
             if len(ts):
                 rows.append(pd.DataFrame({"t": np.asarray(ts), "trial": trial,
                                           "flywire_id": core_ids[bi]}))
-        print("      трайл %d: %d спайков" % (trial, mon.num_spikes))
+        print("      trial %d: %d spikes" % (trial, mon.num_spikes))
     return (pd.concat(rows, ignore_index=True) if rows
             else pd.DataFrame(columns=["t", "trial", "flywire_id"]))
 
 
 def compare(full: pd.DataFrame, repl: pd.DataFrame, core_ids: list[int], dt_s: float) -> dict:
-    """Сравнение спайковых поездов ядра: полная модель против подсхемы."""
+    """Comparison of core spike trains: full model against subcircuit."""
     core = set(core_ids)
     f = full[full.flywire_id.isin(core)]
-    # трайлы берутся из конфига, а не из данных: при контроле тишины спайков нет
-    # вовсе, и «нет расхождений» должно означать сравнение, а не пустой цикл
+    # trials are taken from the config, not from the data: in the silence
+    # control there are no spikes at all, and "no discrepancies" must mean a
+    # comparison, not an empty loop
     trials = list(range(N_RUN))
     n_exact = n_total = 0
     worst = 0
@@ -252,9 +252,9 @@ def compare(full: pd.DataFrame, repl: pd.DataFrame, core_ids: list[int], dt_s: f
             "pass": bool(frac >= PASS_FRACTION and worst <= PASS_MAX_EXTRA_SPIKES)}
 
 
-# --- часть 3: декодер ---------------------------------------------------------
+# --- part 3: decoder ---------------------------------------------------------
 def type_rates(spikes: pd.DataFrame, neurons: pd.DataFrame, n_run: int, t_s: float) -> pd.Series:
-    """Средняя частота по типу MBON (Гц), усреднённая по нейронам и трайлам."""
+    """Mean rate by MBON type (Hz), averaged over neurons and trials."""
     mbon = neurons[neurons.mb_role == "MBON"][["root_id", "hemibrain_type"]]
     s = spikes.merge(mbon, left_on="flywire_id", right_on="root_id", how="inner")
     cnt = s.groupby(["hemibrain_type", "flywire_id"]).size()
@@ -265,12 +265,12 @@ def type_rates(spikes: pd.DataFrame, neurons: pd.DataFrame, n_run: int, t_s: flo
 
 
 def index_from_rates(rates: pd.Series, norm: pd.Series) -> float | None:
-    """Индекс запаха по разделу 6 спецификации; вес типа = 1/N внутри группы.
+    """Odor index per specification section 6; type weight = 1/N within the group.
 
-    Тип, у которого нормировочная константа не определена (частота по
-    калибровочному набору равна нулю), из группы исключается и в N не входит
-    (правка v0.8, раздел 3в). Если в группе не осталось типов, индекс не
-    определён.
+    A type whose normalizing constant is undefined (rate on the calibration set
+    is zero) is excluded from the group and does not count toward N (v0.8
+    revision, section 3в). If no types remain in the group, the index is
+    undefined.
     """
     def group(types: list[str]) -> float | None:
         usable = [t for t in types if t in rates.index and norm.get(t, 0) > 0]
@@ -291,26 +291,26 @@ def main() -> int:
     report: dict = {"config_sha256": stats["config_sha256"], "spec": "v0.9",
                     "n_run": N_RUN, "t_run_ms": T_RUN_MS, "quick": QUICK}
 
-    print("V1a, конфиг подсхемы %s" % stats["config_sha256"][:16])
+    print("V1a, subcircuit config %s" % stats["config_sha256"][:16])
 
-    print("\n[1] тождество субстрата")
+    print("\n[1] substrate identity")
     report["substrate"] = check_substrate(neurons)
     for k, v in report["substrate"].items():
         print("   %-22s %s" % (k, v))
 
     core_ids = sorted(neurons[neurons.mb_role != "PN"].root_id.astype("int64").tolist())
     sets = pn_sets(neurons)
-    print("\nнаборы входов: " + ", ".join(
+    print("\ninput sets: " + ", ".join(
         "%s %d" % (k, len(v)) for k, v in sets.items() if v))
     ov = set(sets[CALIB_ODORS[0]]) & set(sets[EVAL_ODORS[0]])
-    print("запахов: %d калибровочных, %d оценочных по %d PN; пересечение %s и %s: %d"
+    print("odors: %d calibration, %d evaluation of %d PN each; overlap of %s and %s: %d"
           % (len(CALIB_ODORS), len(EVAL_ODORS), N_UPN30,
              CALIB_ODORS[0], EVAL_ODORS[0], len(ov)))
 
     from brian2 import defaultclock
     dt_s = float(defaultclock.dt)
 
-    print("\n[2] прогоны и сравнение поездов")
+    print("\n[2] runs and train comparison")
     report["conditions"] = {}
     spikes_by_cond: dict[str, pd.DataFrame] = {}
     for cond, rate in CONDITIONS:
@@ -322,36 +322,36 @@ def main() -> int:
         repl_path = RUNS / ("%s_replay.parquet" % name)
         repl = run_replay(core_ids, full)
         repl.to_parquet(repl_path, compression="brotli")
-        # декодер читает ответы подсхемы, а не полной модели
+        # the decoder reads the subcircuit's responses, not the full model's
         spikes_by_cond[name] = repl
         res = compare(full, repl, core_ids, dt_s)
         res["wall_s"] = round(time.time() - t0, 1)
         report["conditions"][name] = res
-        print("   совпало %d из %d (%.4f), макс. расхождение спайков %d -> %s"
+        print("   matched %d of %d (%.4f), max spike-count discrepancy %d -> %s"
               % (res["n_exact"], res["n_compared"], res["fraction_exact"],
-                 res["max_spike_count_diff"], "ПРОШЛА" if res["pass"] else "НЕ ПРОШЛА"))
+                 res["max_spike_count_diff"], "PASSED" if res["pass"] else "FAILED"))
 
-    print("\n[3] декодер")
+    print("\n[3] decoder")
     report["decoder"] = decoder_checks(spikes_by_cond, neurons)
     for k, v in report["decoder"].items():
         if k == "check2_by_freq":
             for f, d in v.items():
                 print("   --- %s ---" % f)
-                print("       нулевое распределение (10 калибровочных, «оставь один»): "
-                      "mu %+.5f, sigma %.5f | медиана %+.5f, MAD %.5f"
+                print("       null distribution (10 calibration, leave-one-out): "
+                      "mu %+.5f, sigma %.5f | median %+.5f, MAD %.5f"
                       % (d["mu_null"], d["sigma_null"], d["median_null"], d["mad_null"]))
-                print("       индексы 5 оценочных: %s"
+                print("       indices of 5 evaluation odors: %s"
                       % ", ".join("%+.4f" % v for v in d["evaluation_indices"]))
-                print("       z каждого: %s | z среднего: %+.3f"
+                print("       z of each: %s | z of mean: %+.3f"
                       % (", ".join("%+.2f" % z for z in d["z_each"]), d["zbar"]))
-                print("       разделимость 0,038/sigma = %s" % d["separation_effect_over_sigma"])
-                print("       условие 1 |mu|<=%.3f: %s | условие 2 |z|<=%.1f: %s | "
-                      "условие 3 sigma<=%.4f: %s -> %s"
+                print("       separation 0.038/sigma = %s" % d["separation_effect_over_sigma"])
+                print("       condition 1 |mu|<=%.3f: %s | condition 2 |z|<=%.1f: %s | "
+                      "condition 3 sigma<=%.4f: %s -> %s"
                       % (NULL_LOCATION_TOL, d["cond1_location_pass"], ZBAR_TOL,
                          d["cond2_zbar_pass"], NULL_SCALE_TOL, d["cond3_scale_pass"],
-                         "ПРОШЛА" if d["pass"] else "НЕ ПРОШЛА"))
+                         "PASSED" if d["pass"] else "FAILED"))
         elif k == "protocol":
-            print("   %-26s калибровка %d, оценка %d запахов"
+            print("   %-26s calibration %d, evaluation %d odors"
                   % (k, len(v["calibration_odors"]), len(v["evaluation_odors"])))
         else:
             print("   %-26s %s" % (k, v))
@@ -363,24 +363,24 @@ def main() -> int:
     (OUT / "v1a_report.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    print("\nV1a: субстрат %s, отклик %s, декодер %s -> %s"
-          % (ok_sub, ok_resp, ok_dec, "ПРОЙДЕНА" if report["v1a_pass"] else "НЕ ПРОЙДЕНА"))
+    print("\nV1a: substrate %s, response %s, decoder %s -> %s"
+          % (ok_sub, ok_resp, ok_dec, "PASSED" if report["v1a_pass"] else "FAILED"))
     return 0
 
 
 def decoder_checks(spikes: dict[str, pd.DataFrame], neurons: pd.DataFrame) -> dict:
-    """Первая и вторая проверки декодера раздела 6 спецификации.
+    """First and second decoder checks of specification section 6.
 
-    Вторая проверка выполняется по процедуре раздела 3г: десять калибровочных
-    запахов задают нормировочные константы и, методом «оставь один», нулевое
-    распределение; пять отложенных проверяются против него. Три условия —
-    положение нуля, согласованность и разделимость — должны выполниться на
-    обеих объявленных частотах.
+    The second check is run by the procedure of section 3г: ten calibration
+    odors set the normalizing constants and, by leave-one-out, the null
+    distribution; five held-out odors are checked against it. Three
+    conditions — null location, consistency, and separation — must hold at
+    both declared frequencies.
     """
     out: dict = {}
     t_s = T_RUN_MS / 1000.0
 
-    # первая проверка: согласованность знака. Активируем группы искусственно.
+    # first check: sign consistency. Groups are activated artificially.
     types = sorted(set(neurons[neurons.mb_role == "MBON"].hemibrain_type.dropna()))
     one = pd.Series(1.0, index=types)
     only_av = pd.Series([1.0 if t in AVOID else 0.0 for t in types], index=types)
@@ -394,10 +394,11 @@ def decoder_checks(spikes: dict[str, pd.DataFrame], neurons: pd.DataFrame) -> di
     sign_ok = (i_av == 1.0 and i_ap == -1.0 and abs(i_base) < 1e-12)
     out["check1_sign_pass"] = bool(sign_ok)
 
-    # Вторая проверка — процедура раздела 3г, зафиксирована до получения
-    # оценочных данных. Нулевое распределение оценивается по калибровочному
-    # набору методом «оставь один»: константы для запаха i пересчитываются по
-    # остальным девяти, и его индекс считается тем же кодом, что оценочные.
+    # The second check is the procedure of section 3г, fixed before the
+    # evaluation data were obtained. The null distribution is estimated on the
+    # calibration set by leave-one-out: the constants for odor i are
+    # recomputed from the other nine, and its index is computed by the same
+    # code as the evaluation odors.
     out["protocol"] = {
         "calibration_odors": CALIB_ODORS, "evaluation_odors": EVAL_ODORS,
         "seeds": ODOR_SEEDS, "n_pn": N_UPN30,
@@ -450,9 +451,9 @@ def decoder_checks(spikes: dict[str, pd.DataFrame], neurons: pd.DataFrame) -> di
     checks = out["check2_by_freq"]
     out["check2_naive_pass"] = bool(checks) and all(v["pass"] for v in checks.values())
     if not checks:
-        out["check2_note"] = "нет полного набора условий ни на одной частоте"
-    out["check3_note"] = ("не выполняется: зависит от источника PN-паттернов, "
-                          "отложенного до V1b (спецификация, раздел 3а)")
+        out["check2_note"] = "no complete set of conditions at any frequency"
+    out["check3_note"] = ("not run: depends on the source of PN patterns, "
+                          "deferred to V1b (specification, section 3а)")
     out["pass"] = bool(sign_ok and out["check2_naive_pass"])
     return out
 

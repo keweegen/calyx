@@ -1,28 +1,29 @@
 # -*- coding: utf-8 -*-
-"""Ступень V1b: подсхема грибовидного тела после подмен шага 1.
+"""Stage V1b: mushroom-body subcircuit after the step-1 substitutions.
 
-Три подмены, каждая включается отдельным флагом конфига, чтобы регрессионный
-контроль (спецификация, раздел 3, критерий V1b (а)) мог выключить их все и
-получить конфигурацию V1a:
+Three substitutions, each toggled by its own config flag, so that the
+regression control (specification, section 3, criterion V1b (а)) can turn them
+all off and recover the V1a configuration:
 
-  dan_mask   маска быстрых синапсов DAN: снимаются рёбра DAN->KC и DAN->MBON,
-             то есть обе стороны пластичного синапса, где дофамин учёлся бы
-             дважды. DAN->APL, DAN->DAN и DAN->PN остаются: правило шага 1 их
-             не моделирует.
-  graded_apl APL выводится из спайкового режима. Уравнение мембраны из [2]
-             без порога, сброса и рефрактерности; выход g_apl*max(0, v - v_0)
-             передаётся каждый шаг интегрирования по рёбрам APL->KC и APL->MBON
-             с весами коннектома (суммируемая синаптическая переменная).
-  odor_input вход - паттерны запахов вместо пуассоновской стимуляции выборок PN.
-             Частоты по гломерулам из results/odor_panel/pn_rates_by_odor.tsv
-             (источник [39], преобразование [42]); подаются на унигломерулярные
-             PN обоих полушарий симметрично.
+  dan_mask   mask of the DAN fast synapses: the DAN->KC and DAN->MBON edges are
+             removed, i.e. both sides of the plastic synapse where dopamine
+             would otherwise be counted twice. DAN->APL, DAN->DAN and DAN->PN
+             remain: the step-1 rule does not model them.
+  graded_apl APL is taken out of spiking mode. The membrane equation from [2]
+             without threshold, reset, or refractoriness; the output
+             g_apl*max(0, v - v_0) is passed every integration step along the
+             APL->KC and APL->MBON edges with connectome weights (a summed
+             synaptic variable).
+  odor_input input - odor patterns instead of Poisson stimulation of PN draws.
+             Rates by glomerulus from results/odor_panel/pn_rates_by_odor.tsv
+             (source [39], conversion [42]); applied to uniglomerular PN of
+             both hemispheres symmetrically.
 
-Калибруются ровно два параметра режима B: pn_kc_scale и g_apl (спецификация,
-раздел 3е, V1b-4.3). Всё остальное - режим A из [2].
+Exactly two parameters of mode B are calibrated: pn_kc_scale and g_apl
+(specification, section 3е, V1b-4.3). Everything else is mode A from [2].
 
-Запуск:  python v1b_subcircuit.py --self-test
-         python v1b_subcircuit.py --odor "pentyl acetate" --scale 1.0 --gapl 1.0
+Run:  python v1b_subcircuit.py --self-test
+      python v1b_subcircuit.py --odor "pentyl acetate" --scale 1.0 --gapl 1.0
 """
 from __future__ import annotations
 
@@ -42,32 +43,32 @@ sys.path.insert(0, str(REPO))
 
 SUB = HERE / "data" / "mb_subcircuit"
 PANEL = HERE / "results" / "odor_panel" / "pn_rates_by_odor.tsv"
-# Каталог артефактов ступени. По умолчанию - V1b (пилот); прогоны следующей
-# ступени задают его через CALYX_V1B_OUT, чтобы артефакты закрытой ступени не
-# перезаписывались артефактами новой.
+# Directory for the stage's artifacts. Default is V1b (pilot); runs of the next
+# stage set it via CALYX_V1B_OUT, so that a closed stage's artifacts are not
+# overwritten by the new stage's artifacts.
 OUT = Path(os.environ.get("CALYX_V1B_OUT") or (HERE / "results" / "v1b"))
 
-# Окно измерения по [40]: импульс 1 с, амплитуда - средняя частота за 4 с от
-# начала импульса (спецификация, раздел 3е, V1b-2.1).
+# Measurement window per [40]: 1 s pulse, amplitude is the mean rate over 4 s
+# from pulse onset (specification, section 3е, V1b-2.1).
 T_ON_MS, T_PULSE_MS, T_WINDOW_MS = 200, 1000, 4000
 T_RUN_MS = T_ON_MS + T_WINDOW_MS
 
-# Адаптивное усечение: прогон идёт до затухания, а не весь измерительный
-# интервал. QUIET_MS - окно, в котором не должно быть ни одного спайка,
-# чтобы прогон считался завершённым. Счётчики тождественны полному прогону:
-# при нулевом фоне сеть без входа не спайкует.
+# Adaptive truncation: the run proceeds until decay, not through the whole
+# measurement interval. QUIET_MS is the window in which there must be no spike
+# at all for the run to be considered finished. The counts are identical to
+# the full run: with zero background, a network with no input does not spike.
 SETTLE_MS, QUIET_MS = 300, 200
 
-KC_SPIKE_THRESHOLD = 1      # V1b-2.1: ответ на пробу - хотя бы один спайк
-N_TRIALS = 6                # V1b-2.2: шесть предъявлений
-MIN_TRIALS = 3              # V1b-2.2: ответ не менее чем на половине
+KC_SPIKE_THRESHOLD = 1      # V1b-2.1: response to a trial - at least one spike
+N_TRIALS = 6                # V1b-2.2: six presentations
+MIN_TRIALS = 3              # V1b-2.2: response on at least half
 
 
-# Уравнения ядра: [2] плюс член градуального торможения. При выключенном
-# градуальном APL член остаётся тождественным нулю, поэтому уравнение
-# численно совпадает с [2] и регрессия к V1a не нарушается. Вынесено в
-# константу, чтобы регрессия поездов (v1c_regression_trains.py) проверяла
-# ровно тот текст, по которому считает ступень, а не его копию.
+# Core equations: [2] plus a graded-inhibition term. With graded APL off, the
+# term stays identically zero, so the equation numerically matches [2] and the
+# regression to V1a is not broken. Factored into a constant so that the train
+# regression (v1c_regression_trains.py) checks exactly the text that the stage
+# computes with, not a copy of it.
 EQS_CORE = """
     dv/dt = (v_0 - v + g - inh) / t_mbr : volt (unless refractory)
     dg/dt = -g / tau                    : volt (unless refractory)
@@ -85,7 +86,7 @@ def load_substrate() -> tuple[pd.DataFrame, pd.DataFrame]:
 
 
 def apply_dan_mask(con: pd.DataFrame, role: dict) -> tuple[pd.DataFrame, int]:
-    """Снять рёбра DAN->KC и DAN->MBON. Возвращает оставшиеся рёбра и число снятых."""
+    """Remove the DAN->KC and DAN->MBON edges. Returns the remaining edges and the number removed."""
     pre = con.Presynaptic_ID.map(role)
     post = con.Postsynaptic_ID.map(role)
     drop = (pre == "DAN") & post.isin(["Kenyon_Cell", "MBON"])
@@ -93,10 +94,10 @@ def apply_dan_mask(con: pd.DataFrame, role: dict) -> tuple[pd.DataFrame, int]:
 
 
 def odor_rates(odor: str, neurons: pd.DataFrame) -> dict[int, float]:
-    """Частоты пуассоновского входа на унигломерулярные PN обоих полушарий."""
+    """Poisson input rates on uniglomerular PN of both hemispheres."""
     pn = pd.read_csv(PANEL, sep="\t", index_col=0)
     if odor not in pn.index:
-        raise SystemExit("запах %r не в панели; доступны: %s"
+        raise SystemExit("odor %r not in the panel; available: %s"
                          % (odor, ", ".join(pn.index)))
     by_gl = pn.loc[odor].to_dict()
     upn = neurons[(neurons.mb_role == "PN")
@@ -110,18 +111,19 @@ def build(neurons: pd.DataFrame, con: pd.DataFrame, *, pn_kc_scale: float,
           rates: dict[int, float] | None,
           pulse_ms: int = T_PULSE_MS, run_ms: int = T_RUN_MS,
           kc_mbon_scale: float = 1.0, record_vmax: bool = False):
-    """Собрать сеть Brian 2. Возвращает (Network, SpikeMonitor, порядок id).
+    """Build the Brian 2 network. Returns (Network, SpikeMonitor, id order).
 
-    kc_mbon_scale - третья ручка ступени V1c (V1c-E2.1): один глобальный скаляр
-    на вес каждого ребра KC->MBON подсхемы; прочие рёбра не затрагиваются. При
-    значении 1.0 ветка масштабирования не исполняется вовсе, поэтому сеть
-    тождественна сети V1b' побитово, а не с точностью до умножения на единицу.
+    kc_mbon_scale - the third knob of stage V1c (V1c-E2.1): one global scalar
+    on the weight of every KC->MBON edge of the subcircuit; other edges are not
+    affected. At value 1.0 the scaling branch is not executed at all, so the
+    network is bitwise identical to the V1b' network, not merely identical up
+    to multiplication by one.
 
-    record_vmax - наблюдатель для некритериального выхода V1c-E7.2: пиковое
-    значение мембранного потенциала за прогон, читаемое ДО сброса. Переменная
-    vmax ни в одно уравнение не входит и ни на одну другую переменную не
-    действует; её инертность доказывается побитовой сверкой V1c-E7.3 на узле
-    s = 1 с артефактами V1b', посчитанными без неё.
+    record_vmax - observer for the non-criterion output V1c-E7.2: the peak
+    membrane-potential value over the run, read BEFORE reset. The vmax
+    variable enters no equation and acts on no other variable; its inertness
+    is proven by the bitwise reconciliation V1c-E7.3 at node s = 1 against the
+    V1b' artifacts computed without it.
     """
     from brian2 import (NeuronGroup, Synapses, PoissonGroup, SpikeMonitor,
                         Network, TimedArray, Hz, ms, mV)
@@ -142,10 +144,10 @@ def build(neurons: pd.DataFrame, con: pd.DataFrame, *, pn_kc_scale: float,
     ci = {f: k for k, f in enumerate(core_ids)}
     ai = {f: k for k, f in enumerate(apl_ids)}
 
-    # Текст уравнений ядра не редактируется: наблюдатель дописывается
-    # отдельной строкой, чтобы регрессия поездов (v1c_regression_trains.py)
-    # продолжала проверять ровно ту константу EQS_CORE, по которой считает
-    # ступень.
+    # The text of the core equations is not edited: the observer is appended
+    # as a separate line, so that the train regression (v1c_regression_trains.py)
+    # keeps checking exactly the EQS_CORE constant that the stage computes
+    # with.
     eqs = EQS_CORE + ("    vmax : volt\n" if record_vmax else "")
     neu = NeuronGroup(len(core_ids), model=eqs, method="linear",
                       threshold=dp["eq_th"], reset=dp["eq_rst"],
@@ -155,32 +157,32 @@ def build(neurons: pd.DataFrame, con: pd.DataFrame, *, pn_kc_scale: float,
     neu.inh = 0 * mV
     neu.rfc = dp["t_rfc"]
     if record_vmax:
-        # V1c-E7.2: максимум по всем шагам симулятора, значение v читается до
-        # сброса. Слот groups с порядком после интегратора - это состояние
-        # после интегрирования и до проверки порога (слот thresholds) и до
-        # сброса (слот resets), то есть ровно то, что требует спецификация.
-        # До начала импульса вход нулевой, фон модели [2] нулевой, поэтому v
-        # тождественно равно v_0, и максимум по всему прогону совпадает с
-        # максимумом по окну предъявления.
+        # V1c-E7.2: the maximum over all simulator steps, the value of v read
+        # before reset. The groups slot, ordered after the integrator, is the
+        # state after integration and before the threshold check (thresholds
+        # slot) and before reset (resets slot) - exactly what the specification
+        # requires. Before pulse onset the input is zero, the background of
+        # model [2] is zero, so v is identically v_0, and the maximum over the
+        # whole run coincides with the maximum over the presentation window.
         neu.vmax = dp["v_0"]
         neu.run_regularly("vmax = clip(v, vmax, 1e9 * volt)",
                           when="groups", order=1, name="vmax_tracker")
 
     objs = [neu]
 
-    # рёбра внутри ядра
+    # edges within the core
     e = con[con.Presynaptic_ID.isin(ci) & con.Postsynaptic_ID.isin(ci)]
     w = e["Excitatory x Connectivity"].to_numpy() * dp["w_syn"]
     if pn_kc_scale != 1.0 or kc_mbon_scale != 1.0:
         pre_role = e.Presynaptic_ID.map(role).to_numpy()
         post_role = e.Postsynaptic_ID.map(role).to_numpy()
-        # не np.where: он срывает единицы Brian 2 и веса приходят безразмерными
+        # not np.where: it strips Brian 2 units and the weights come out dimensionless
         mult = np.ones(len(e))
         if pn_kc_scale != 1.0:
             mult[(pre_role == "PN") & (post_role == "Kenyon_Cell")] = pn_kc_scale
         if kc_mbon_scale != 1.0:
-            # множества рёбер PN->KC и KC->MBON не пересекаются, поэтому
-            # порядок присваиваний на результат не влияет
+            # the sets of PN->KC and KC->MBON edges do not overlap, so the
+            # order of assignments does not affect the result
             mult[(pre_role == "Kenyon_Cell") & (post_role == "MBON")] = kc_mbon_scale
         w = w * mult
     syn = Synapses(neu, neu, "w : volt", on_pre="g += w",
@@ -192,7 +194,7 @@ def build(neurons: pd.DataFrame, con: pd.DataFrame, *, pn_kc_scale: float,
 
     apl = None
     if graded_apl:
-        # Градуальный узел: та же мембрана, без порога, сброса и рефрактерности.
+        # Graded node: the same membrane, without threshold, reset, or refractoriness.
         eqs_apl = """
             dv/dt = (v_0 - v + g) / t_mbr : volt
             dg/dt = -g / tau              : volt
@@ -204,7 +206,7 @@ def build(neurons: pd.DataFrame, con: pd.DataFrame, *, pn_kc_scale: float,
         apl.g = 0 * mV
         objs.append(apl)
 
-        # вход на APL - обычные спайковые синапсы
+        # input to APL - ordinary spiking synapses
         into = con[con.Presynaptic_ID.isin(ci) & con.Postsynaptic_ID.isin(ai)]
         s_in = Synapses(neu, apl, "w : volt", on_pre="g += w",
                         delay=dp["t_dly"], name="apl_in")
@@ -213,7 +215,7 @@ def build(neurons: pd.DataFrame, con: pd.DataFrame, *, pn_kc_scale: float,
         s_in.w = into["Excitatory x Connectivity"].to_numpy() * dp["w_syn"]
         objs.append(s_in)
 
-        # выход APL - суммируемая переменная, передаётся каждый шаг
+        # APL output - a summed variable, passed every step
         out = con[con.Presynaptic_ID.isin(ai) & con.Postsynaptic_ID.isin(ci)]
         s_out = Synapses(apl, neu,
                          """w : volt
@@ -221,8 +223,9 @@ def build(neurons: pd.DataFrame, con: pd.DataFrame, *, pn_kc_scale: float,
                          name="apl_out", namespace=dp)
         s_out.connect(i=out.Presynaptic_ID.map(ai).to_numpy(),
                       j=out.Postsynaptic_ID.map(ci).to_numpy())
-        # знак торможения задаётся членом (-inh) в уравнении ядра, поэтому вес
-        # берётся по модулю числа синапсов; g_apl - калибруемый коэффициент
+        # the sign of inhibition is set by the (-inh) term in the core
+        # equation, so the weight is taken as the absolute value of the
+        # synapse count; g_apl is the calibrated coefficient
         s_out.w = np.abs(out["Connectivity"].to_numpy()) * dp["w_syn"] * g_apl
         objs.append(s_out)
         n_apl_in, n_apl_out = len(into), len(out)
@@ -231,9 +234,9 @@ def build(neurons: pd.DataFrame, con: pd.DataFrame, *, pn_kc_scale: float,
 
     n_stim = 0
     if rates:
-        # Импульс запаха 1 с, начиная с T_ON_MS (протокол [40]). Пуассоновская
-        # группа с временным профилем: до и после импульса частота нулевая.
-        # PoissonInput постоянен во времени и для импульса не годится.
+        # 1 s odor pulse, starting at T_ON_MS (protocol [40]). A Poisson
+        # group with a time profile: before and after the pulse the rate is
+        # zero. PoissonInput is constant in time and does not fit a pulse.
         stim_ids = [f for f, r in rates.items() if f in ci and r > 0]
         n_stim = len(stim_ids)
         if n_stim:
@@ -250,7 +253,7 @@ def build(neurons: pd.DataFrame, con: pd.DataFrame, *, pn_kc_scale: float,
             s_stim.connect(i=np.arange(n_stim),
                            j=np.array([ci[f] for f in stim_ids]))
             objs.extend([src, s_stim])
-            # у стимулируемых нейронов рефрактерность снимается, как в model.poi
+            # refractoriness is removed for stimulated neurons, as in model.poi
             for f in stim_ids:
                 neu.rfc[ci[f]] = 0 * ms
 
@@ -266,7 +269,7 @@ def build(neurons: pd.DataFrame, con: pd.DataFrame, *, pn_kc_scale: float,
 
 def measure(mon, core_ids: list[int], neurons: pd.DataFrame,
             window_ms: float = T_WINDOW_MS) -> pd.DataFrame:
-    """Средняя частота каждого нейрона в окне измерения, спайк/с."""
+    """Mean rate of each neuron in the measurement window, spikes/s."""
     from brian2 import second
     t0, t1 = T_ON_MS / 1000.0, (T_ON_MS + window_ms) / 1000.0
     counts = np.zeros(len(core_ids))
@@ -287,11 +290,11 @@ def run_odor(neurons: pd.DataFrame, con: pd.DataFrame, odor: str, *,
              pulse_ms: int = T_PULSE_MS, window_ms: int = T_WINDOW_MS,
              extra_windows: tuple = (), kc_mbon_scale: float = 1.0,
              record_vmax: bool = False, return_trains: bool = False) -> dict:
-    """Шесть предъявлений одного запаха. Возвращает счёт спайков по пробам.
+    """Six presentations of one odor. Returns the spike counts by trial.
 
-    Сеть строится один раз; между пробами состояние восстанавливается и
-    меняется только зерно генератора, поэтому пробы различаются лишь
-    реализацией пуассоновского входа (V1b-2.2).
+    The network is built once; between trials the state is restored and only
+    the generator seed changes, so trials differ only in the realization of
+    the Poisson input (V1b-2.2).
     """
     from brian2 import ms, seed as b2seed, device
 
@@ -304,11 +307,12 @@ def run_odor(neurons: pd.DataFrame, con: pd.DataFrame, odor: str, *,
         record_vmax=record_vmax)
     net.store("init")
     core_grp = net["core"] if record_vmax else None
-    # поезда как последовательности: нужны проверке исполнения перед прогоном
-    # ступени V1c, где сравнение по счётчикам слабее требуемого
+    # trains as sequences: needed by the execution check before the V1c
+    # stage run, where comparison by counts is weaker than required
     trains = [] if return_trains else None
-    # имя не vmax: локальная переменная с именем переменной группы протекает в
-    # пространство имён Brian и он печатает конфликт разрешения на каждой пробе
+    # name is not vmax: a local variable named after the group variable
+    # leaks into Brian's namespace and it prints a resolution conflict on
+    # every trial
     vmax_buf = (np.zeros((len(core_ids), len(seeds)), dtype=np.float64)
                 if record_vmax else None)
 
@@ -319,7 +323,7 @@ def run_odor(neurons: pd.DataFrame, con: pd.DataFrame, odor: str, *,
     for k, sd in enumerate(seeds):
         net.restore("init")
         b2seed(sd)
-        # до конца импульса плюс запас, дальше - пока в последнем окне есть спайки
+        # to the end of the pulse plus a margin, after that - while there are spikes in the last window
         done = min(T_ON_MS + pulse_ms + SETTLE_MS, run_ms)
         net.run(done * ms)
         while done < run_ms:
@@ -335,13 +339,13 @@ def run_odor(neurons: pd.DataFrame, con: pd.DataFrame, odor: str, *,
             trains.append((np.asarray(mon.i[:], dtype=np.int64),
                            np.asarray(mon.t[:] / _second, dtype=np.float64)))
         if record_vmax:
-            # значение снимается после прогона пробы: сама переменная обновлена
-            # на каждом шаге до проверки порога и до сброса
+            # the value is read after the trial run: the variable itself is
+            # updated every step before the threshold check and before reset
             from brian2 import mV as _mV
             vmax_buf[:, k] = np.asarray(core_grp.vmax / _mV, dtype=np.float64)
         for idx, ts in mon.spike_trains().items():
-            # имя не t: локальная t протекает в пространство имён Brian и
-            # конфликтует с его внутренней переменной времени
+            # name is not t: a local t leaks into Brian's namespace and
+            # conflicts with its internal time variable
             spk = np.asarray(ts) - T_ON_MS / 1000.0
             for wi, (a, b) in enumerate(wins):
                 counts[wi][idx, k] = ((spk >= a) & (spk < b)).sum()
@@ -358,7 +362,7 @@ def run_odor(neurons: pd.DataFrame, con: pd.DataFrame, odor: str, *,
 
 
 def kc_fraction(res: dict, neurons: pd.DataFrame) -> dict:
-    """Доля отвечающих KC по правилу V1b-2.1-2.3 плюс таблица чувствительности."""
+    """Fraction of responding KC by rule V1b-2.1-2.3 plus a sensitivity table."""
     role = dict(zip(neurons.root_id, neurons.mb_role))
     is_kc = np.array([role[i] == "Kenyon_Cell" for i in res["core_ids"]])
     c = res["counts"][is_kc]
@@ -376,7 +380,7 @@ def kc_fraction(res: dict, neurons: pd.DataFrame) -> dict:
     return out
 
 
-# --- наборы запахов (спецификация, V1b-4.1) ----------------------------------
+# --- odor sets (specification, V1b-4.1) ----------------------------------
 PANEL_CAL = ["2-heptanone", "isopentyl acetate", "hexanal",
              "6-methyl-5-hepten-2-one", "diethyl succinate", "methyl octanoate"]
 PANEL_EVAL = ["pentyl acetate", "butyl acetate", "ethyl lactate", "1-octen-3-ol",
@@ -385,44 +389,45 @@ REF_PAIRS = [("pentyl acetate", "butyl acetate"),
              ("pentyl acetate", "ethyl lactate"),
              ("butyl acetate", "ethyl lactate")]
 
-# панель ступени P14: 14 одорантов, C и E вместе (спецификация, V1b-4.1)
+# stage panel P14: 14 odorants, C and E together (specification, V1b-4.1)
 PANEL_ALL = PANEL_CAL + PANEL_EVAL
 
-# множество T38: шесть типов MBON, записанных в [38] (спецификация, V1b-3.1)
+# set T38: six MBON types recorded in [38] (specification, V1b-3.1)
 T38 = ["MBON11", "MBON12", "MBON13", "MBON14", "MBON17", "MBON18"]
-# группа избегания: эталона в [38] нет, пороги не применяются, величины
-# печатаются отчётно (спецификация, V1b-3.1, второе следствие)
+# avoidance group: there is no reference in [38], no thresholds apply, the
+# values are printed for reporting only (specification, V1b-3.1, second
+# corollary)
 AVOID = ["MBON01", "MBON02", "MBON03", "MBON04", "MBON05", "MBON06"]
-# метка для клеток без hemibrain_type: в подсхеме такой один MBON
+# label for cells without hemibrain_type: there is one such MBON in the subcircuit
 UNTYPED = "<без типа>"
-# Таблица зёрен: своё смещение на каждую пару «набор x тайминг», все различны.
-# Шесть проб на прогон, поэтому шага 50 достаточно, чтобы отрезки не пересеклись.
-# Прогон при g_APL = 0 идёт на зёрнах того прогона, с которым сравнивается
-# (V1b-2.5 - направленная сверка, она обязана быть парной по реализации входа).
-SEED_CAL = 20260908             # P14, калибровка, набор C
-SEED_CAL_M = SEED_CAL + 50      # P14-M, калибровка, набор C (ограничение допустимости)
-SEED_EVAL = SEED_CAL + 100      # P14, оценка, все 14 запахов; и прогон g_APL = 0
-SEED_EVAL_M = SEED_CAL + 200    # P14-M, оценка, все 14 запахов (критерий-вердикт)
-SEED_EMPTY = SEED_CAL + 300     # пустое предъявление (V1b-4.10)
-SEED_PERM = SEED_CAL + 400      # ГСЧ перестановок нуля раздела 3д
+# Seed table: its own offset for every "set x timing" pair, all distinct.
+# Six trials per run, so a step of 50 is enough that the ranges do not overlap.
+# The g_APL = 0 run uses the seeds of the run it is compared against
+# (V1b-2.5 - a directional reconciliation, it must be paired by input realization).
+SEED_CAL = 20260908             # P14, calibration, set C
+SEED_CAL_M = SEED_CAL + 50      # P14-M, calibration, set C (admissibility constraint)
+SEED_EVAL = SEED_CAL + 100      # P14, evaluation, all 14 odors; and the g_APL = 0 run
+SEED_EVAL_M = SEED_CAL + 200    # P14-M, evaluation, all 14 odors (criterion verdict)
+SEED_EMPTY = SEED_CAL + 300     # empty presentation (V1b-4.10)
+SEED_PERM = SEED_CAL + 400      # RNG for the section 3д null permutations
 
-# Тайминг M по [38]: предъявление 5 с, средняя частота в окне предъявления
-# (спецификация, V1b-3.1). Набор P14-M - 14 одорантов при этом тайминге.
+# Timing M per [38]: 5 s presentation, mean rate over the presentation window
+# (specification, V1b-3.1). Set P14-M is the 14 odorants at this timing.
 M_PULSE_MS = M_WINDOW_MS = 5000
 
-# пороги критериев (спецификация, раздел 3е)
+# criterion thresholds (specification, section 3е)
 F_BAND, F_MAX = (0.03, 0.10), 0.10
 OVERLAP_SEP_MIN, OVERLAP_CEIL = 0.25, 0.40
 MBON_FLOOR_HZ, MBON_CEIL_HZ, MBON_MD_MIN, MBON_MD_TYPES = 2.0, 67.0, 0.19, 5
 SPIKES_AB_TARGET = 2.2          # V1b-4.9, [46]
-N_SUBSAMPLE, N_DRAWS = 120, 24  # V1b-3д: подвыборка «записи»
+N_SUBSAMPLE, N_DRAWS = 120, 24  # V1b-3д: "recording" subsample
 
 
 def run_panel(neurons, con, odors, *, pn_kc_scale, g_apl, seed_base,
               pulse_ms=T_PULSE_MS, window_ms=T_WINDOW_MS, extra_windows=(),
               dan_mask=True, graded_apl=True, kc_mbon_scale=1.0,
               record_vmax=False) -> dict:
-    """Прогнать набор запахов одним и тем же стендом."""
+    """Run an odor set through the same testbed."""
     seeds = [seed_base + i for i in range(1, N_TRIALS + 1)]
     out = {}
     for o in odors:
@@ -445,11 +450,11 @@ def _kc_mask(core_ids, neurons, prefix: str | None = None) -> np.ndarray:
 
 def overlap_pearson(by_odor: dict, neurons: pd.DataFrame,
                     rng_seed: int = 20260908) -> dict:
-    """Перекрытие ансамблей KC по V1b-3д: Пирсон внутри подвыборки «записи»."""
+    """Overlap of KC ensembles per V1b-3д: Pearson within the "recording" subsample."""
     odors = list(by_odor)
     ids = by_odor[odors[0]]["core_ids"]
     kc = _kc_mask(ids, neurons)
-    # вектор запаха - среднее по пробам число спайков каждой KC
+    # odor vector - mean spike count of each KC over trials
     vec = {o: by_odor[o]["counts"][kc].mean(axis=1) for o in odors}
     n_kc = int(kc.sum())
     rng = np.random.default_rng(rng_seed)
@@ -471,7 +476,7 @@ def overlap_pearson(by_odor: dict, neurons: pd.DataFrame,
 
 
 def check_overlap(r: dict) -> dict:
-    """Критерий перекрытия: порядок трёх эталонных пар, разделение, потолок."""
+    """Overlap criterion: order of three reference pairs, separation, ceiling."""
     g = lambda a, b: r.get((a, b), r.get((b, a), float("nan")))
     pab = g(*REF_PAIRS[0])
     pel, bel = g(*REF_PAIRS[1]), g(*REF_PAIRS[2])
@@ -490,11 +495,12 @@ def check_overlap(r: dict) -> dict:
 
 def mbon_type_rates(by_odor: dict, neurons: pd.DataFrame,
                     window_ms: float) -> pd.DataFrame:
-    """Средняя частота типа MBON по запахам, спайк/с (V1b-3.1)."""
+    """Mean MBON-type rate by odor, spikes/s (V1b-3.1)."""
     ids = by_odor[list(by_odor)[0]]["core_ids"]
-    # один MBON подсхемы (левый, 720575940623743415) размечен без типа и без
-    # компартмента; он не в T38, эталона у него нет, но и молча пропадать из
-    # таблицы не должен - поэтому получает явную метку
+    # one MBON of the subcircuit (left, 720575940623743415) is annotated
+    # without a type and without a compartment; it is not in T38, it has no
+    # reference, but it must not silently disappear from the table either -
+    # so it gets an explicit label
     typ = dict(zip(neurons.root_id,
                    neurons.hemibrain_type.astype("string").fillna(UNTYPED)))
     role = dict(zip(neurons.root_id, neurons.mb_role))
@@ -510,7 +516,7 @@ def mbon_type_rates(by_odor: dict, neurons: pd.DataFrame,
 
 
 def check_mbon(rates: pd.DataFrame) -> dict:
-    """Пол, потолок и глубина модуляции по T38 (V1b-3.3-3.5)."""
+    """Floor, ceiling, and modulation depth over T38 (V1b-3.3-3.5)."""
     present = [t for t in T38 if t in rates.index]
     res = {"types_present": present, "missing": [t for t in T38 if t not in rates.index]}
     per_type = {}
@@ -532,11 +538,11 @@ def check_mbon(rates: pd.DataFrame) -> dict:
 
 def md_subset_medians(rates: pd.DataFrame, types: list[str],
                       k: int = 5) -> dict:
-    """Медиана MD_t по всем k-запаховым подмножествам панели (V1b-3.5, отчёт).
+    """Median MD_t over all k-odor subsets of the panel (V1b-3.5, report).
 
-    При панели из 14 запахов и k = 5 подмножеств ровно 2 002 - то число, которое
-    называет спецификация. Величина отчётная: сопоставляется с эталонной 0,27,
-    вердикт не определяет.
+    For a panel of 14 odors and k = 5 there are exactly 2,002 subsets - the
+    number the specification names. The value is for reporting: it is compared
+    against the reference 0.27, it does not determine a verdict.
     """
     from itertools import combinations
     n = rates.shape[1]
@@ -560,10 +566,10 @@ def md_subset_medians(rates: pd.DataFrame, types: list[str],
 
 def mbon_type_spikes(by_odor: dict, neurons: pd.DataFrame, mbon_type: str,
                      window_idx: int = 0) -> dict:
-    """Среднее число спайков клетки типа в заданном окне, по запахам.
+    """Mean spike count of a type's cells in a given window, by odor.
 
-    Служит для отчётной величины V1b-3.1: число спайков MBON11 за 1 с импульса
-    рядом со 118 +- 8,3 из [29]. Порога у величины нет.
+    Serves the reporting value of V1b-3.1: the MBON11 spike count over the 1 s
+    pulse next to 118 +- 8.3 from [29]. The value has no threshold.
     """
     ids = by_odor[list(by_odor)[0]]["core_ids"]
     typ = dict(zip(neurons.root_id,
@@ -575,19 +581,19 @@ def mbon_type_spikes(by_odor: dict, neurons: pd.DataFrame, mbon_type: str,
                 "mean_over_odors": float("nan")}
     per = {}
     for o, res in by_odor.items():
-        c = res["counts_by_window"][window_idx][m]     # клетки x пробы
-        per[o] = float(c.mean())                       # среднее по клеткам и пробам
+        c = res["counts_by_window"][window_idx][m]     # cells x trials
+        per[o] = float(c.mean())                       # mean over cells and trials
     return {"type": mbon_type, "n_cells": int(m.sum()), "by_odor": per,
             "mean_over_odors": float(np.mean(list(per.values())))}
 
 
 def mbon_report(by_odor: dict, neurons: pd.DataFrame, window_ms: float) -> dict:
-    """Полный разбор отклика MBON на наборе P14-M (спецификация, V1b-3.1-3.5).
+    """Full breakdown of the MBON response on set P14-M (specification, V1b-3.1-3.5).
 
-    Блокирующая часть - пороги V1b-3.3-3.5 по множеству T38. Остальное отчётно:
-    группа избегания MBON01-MBON06, для которой эталона в [38] нет, все прочие
-    типы, медианы MD по пятизапаховым подмножествам и число спайков MBON11 за
-    первую секунду предъявления.
+    The blocking part is the V1b-3.3-3.5 thresholds over set T38. The rest is
+    for reporting only: the avoidance group MBON01-MBON06, for which there is
+    no reference in [38], all other types, MD medians over five-odor subsets,
+    and the MBON11 spike count over the first second of the presentation.
     """
     rates = mbon_type_rates(by_odor, neurons, window_ms)
     chk = check_mbon(rates)
@@ -610,18 +616,18 @@ def mbon_report(by_odor: dict, neurons: pd.DataFrame, window_ms: float) -> dict:
 
 def spikes_per_response(by_odor: dict, neurons: pd.DataFrame,
                         prefix: str, window_idx: int = 1) -> float:
-    """Спайков за ответ у подтипа KC в окне эталона (V1b-4.9).
+    """Spikes per response of a KC subtype in the reference window (V1b-4.9).
 
-    window_idx указывает на окно [0; 2 с] из extra_windows; учитываются пары
-    «клетка-запах», отвечающие по правилу V1b-2.1-2.2, и внутри них только
-    предъявления, на которых в окне эталона есть спайк.
+    window_idx points to the [0; 2 s] window from extra_windows; the "cell-odor"
+    pairs counted are those that respond by rule V1b-2.1-2.2, and within them
+    only the presentations on which there is a spike in the reference window.
     """
     ids = by_odor[list(by_odor)[0]]["core_ids"]
     m = _kc_mask(ids, neurons, prefix)
     vals = []
     for res in by_odor.values():
-        full = res["counts"][m]                        # окно 4 с, правило ответа
-        ref = res["counts_by_window"][window_idx][m]   # окно эталона 2 с
+        full = res["counts"][m]                        # 4 s window, response rule
+        ref = res["counts_by_window"][window_idx][m]   # 2 s reference window
         responder = (full >= KC_SPIKE_THRESHOLD).sum(axis=1) >= MIN_TRIALS
         for row in np.nonzero(responder)[0]:
             hit = ref[row][ref[row] >= 1]
@@ -630,12 +636,13 @@ def spikes_per_response(by_odor: dict, neurons: pd.DataFrame,
     return float(np.mean(vals)) if vals else float("nan")
 
 
-# --- диагностики оценочного прогона (отчёт, вердикт не определяют) -----------
+# --- evaluation-run diagnostics (report, do not determine the verdict) -----------
 def sensitivity_table(by_odor: dict, neurons: pd.DataFrame) -> dict:
-    """V1b-2.4: среднее и максимум f(o) по панели при каждом правиле ответа.
+    """V1b-2.4: mean and maximum of f(o) over the panel for each response rule.
 
-    Пороги k спайков на пробу и правила агрегации заданы спецификацией и
-    подбору не подлежат; таблица делает зависимость вывода от правила видимой.
+    The k-spikes-per-trial thresholds and aggregation rules are set by the
+    specification and are not subject to tuning; the table makes the
+    dependence of the outcome on the rule visible.
     """
     per = {o: kc_fraction(res, neurons)["sensitivity"]
            for o, res in by_odor.items()}
@@ -646,12 +653,12 @@ def sensitivity_table(by_odor: dict, neurons: pd.DataFrame) -> dict:
 
 
 def kc_coverage(neurons: pd.DataFrame, con: pd.DataFrame) -> pd.Series:
-    """Доля покрытого маской входа c_i по KC (спецификация, раздел 3д).
+    """Fraction of masked input c_i covered per KC (specification, section 3д).
 
-    Знаменатель - все синапсы от унигломерулярных PN на клетку, числитель - те
-    из них, что приходят от 24 гломерул маски [39]. Считается по 4 820 KC,
-    имеющим хотя бы один синапс от uPN; воспроизводит записанные в разделе 3д
-    медиану 0,44 и квартили 0,25 и 0,62.
+    The denominator is all synapses from uniglomerular PN onto the cell, the
+    numerator is those of them that come from the 24 glomeruli of mask [39].
+    Computed over the 4,820 KC that have at least one synapse from a uPN;
+    reproduces the section 3д median of 0.44 and quartiles of 0.25 and 0.62.
     """
     upn = neurons[(neurons.mb_role == "PN")
                   & (neurons.cell_sub_class == "uniglomerular")]
@@ -667,9 +674,10 @@ def kc_coverage(neurons: pd.DataFrame, con: pd.DataFrame) -> pd.Series:
 
 
 def sparseness_treves_rolls(res: dict, neurons: pd.DataFrame) -> float:
-    """Популяционная разреженность S_P по всем 5 177 KC (V1b-2.5).
+    """Population sparseness S_P over all 5,177 KC (V1b-2.5).
 
-    r_i - среднее по 6 пробам число спайков KC i в окне измерения.
+    r_i is the mean over 6 trials of the spike count of KC i in the
+    measurement window.
     """
     role = dict(zip(neurons.root_id, neurons.mb_role))
     kc = np.array([role[i] == "Kenyon_Cell" for i in res["core_ids"]])
@@ -683,7 +691,7 @@ def sparseness_treves_rolls(res: dict, neurons: pd.DataFrame) -> float:
 
 def kc_fraction_report(res: dict, neurons: pd.DataFrame,
                        cov: pd.Series) -> dict:
-    """Доля отвечающих при трёх знаменателях (V1b-2.3: 5 177 - критерий, прочие отчётно)."""
+    """Fraction responding under three denominators (V1b-2.3: 5,177 is the criterion, the rest for reporting only)."""
     role = dict(zip(neurons.root_id, neurons.mb_role))
     side = dict(zip(neurons.root_id, neurons.side))
     ids = res["core_ids"]
@@ -705,10 +713,10 @@ def kc_fraction_report(res: dict, neurons: pd.DataFrame,
 
 def coverage_diagnostics(by_odor: dict, neurons: pd.DataFrame,
                          cov: pd.Series) -> dict:
-    """Отбирает ли непокрытая доля входа отвечающие клетки (раздел 3д).
+    """Whether the uncovered fraction of input selects for responding cells (section 3д).
 
-    Доля отвечающих в разрезе квартилей c_i и ранговая корреляция Спирмена
-    между c_i и числом запахов панели, на которые клетка ответила.
+    Fraction responding broken down by quartile of c_i, and the Spearman rank
+    correlation between c_i and the number of panel odors the cell responded to.
     """
     from scipy.stats import spearmanr
     role = dict(zip(neurons.root_id, neurons.mb_role))
@@ -720,7 +728,7 @@ def coverage_diagnostics(by_odor: dict, neurons: pd.DataFrame,
         r = (res["counts"][kc] >= KC_SPIKE_THRESHOLD).sum(axis=1) >= MIN_TRIALS
         n_odors_resp += r.astype(int)
 
-    c = cov.reindex(kc_ids)                     # NaN у 357 KC без входа от uPN
+    c = cov.reindex(kc_ids)                     # NaN for 357 KC with no input from uPN
     have = c.notna().to_numpy()
     cv, nr = c.to_numpy()[have], n_odors_resp[have]
     q = np.quantile(cv, [0.25, 0.5, 0.75])
@@ -745,12 +753,12 @@ def coverage_diagnostics(by_odor: dict, neurons: pd.DataFrame,
 
 def empty_presentation(neurons, con, *, pn_kc_scale: float, g_apl_rel: float,
                        seed_base: int, window_ms: int = T_WINDOW_MS) -> dict:
-    """Пустое предъявление: V1b-4.10, третья величина.
+    """Empty presentation: V1b-4.10, third quantity.
 
-    Тот же стенд, входные частоты нулевые. Печатается спонтанная частота KC и
-    доля KC, которых правило V1b-2.1-2.2 классифицировало бы как отвечающие.
-    До заморозки измерено: 0 спайков во всей подсхеме при pn_kc_scale = 1 и
-    g_apl = 0,03 g_ref.
+    The same testbed, input rates zero. Prints the spontaneous KC rate and the
+    fraction of KC that rule V1b-2.1-2.2 would classify as responding. Measured
+    before the freeze: 0 spikes in the whole subcircuit at pn_kc_scale = 1 and
+    g_apl = 0.03 g_ref.
     """
     from brian2 import ms, seed as b2seed
     role = dict(zip(neurons.root_id, neurons.mb_role))
@@ -778,39 +786,41 @@ def empty_presentation(neurons, con, *, pn_kc_scale: float, g_apl_rel: float,
             "n_kc": int(kc.sum()), "seeds": seeds, "window_ms": window_ms}
 
 
-# --- сетка калибровки (спецификация, V1b-4.4-4.6) -----------------------------
+# --- calibration grid (specification, V1b-4.4-4.6) -----------------------------
 def g_ref_value() -> float:
-    """g_ref = 1/(v_th - v_0) в 1/мВ, из констант [2]."""
+    """g_ref = 1/(v_th - v_0) in 1/mV, from the constants of [2]."""
     from model import default_params as dp
     return 1.0 / float((dp["v_th"] - dp["v_0"]) / (0.001 * 1.0))
 
 
 def grid_stage1() -> list[tuple[float, float]]:
-    scales = [2.0 ** k for k in range(-6, 3)]                 # 9 значений
-    gains = [0.0] + [10.0 ** (k / 2.0) for k in range(-4, 5)]  # 10 значений
+    scales = [2.0 ** k for k in range(-6, 3)]                 # 9 values
+    gains = [0.0] + [10.0 ** (k / 2.0) for k in range(-4, 5)]  # 10 values
     return [(sc, g) for sc in scales for g in gains]
 
 
 def grid_stage2(stage1: list[dict]) -> list[tuple[float, float]]:
-    """Уточняющая сетка (V1b-4.4).
+    """Refinement grid (V1b-4.4).
 
-    Ограничивающий прямоугольник допустимых точек стадии 1, расширенный на один
-    шаг стадии 1 в каждую сторону; шаги 2^(1/4) по масштабу и 10^(1/8) по g_apl.
-    Границы задаются правилом, записанным до прогона, поэтому выход за диапазон
-    стадии 1 законен и режимом C не является.
+    The bounding box of stage-1 admissible points, expanded by one stage-1
+    step in each direction; steps of 2^(1/4) in scale and 10^(1/8) in g_apl.
+    The bounds are set by a rule written before the run, so going outside the
+    stage-1 range is legitimate and is not mode C.
     """
-    # V1b-4.4 говорит «допустимых точек стадии 1», а V1b-4.5 определяет
-    # допустимость как конъюнкцию доли и MBON. Прямоугольник строится по
-    # ограничению ПО ДОЛЕ: иначе при пустом MBON-ограничении стадии 2 не
-    # существует вовсе, и правило остановки «исчерпание сетки» подменяется
-    # остановкой на грубой сетке. Прочтение объявлено до прогона; при пустой
-    # области исход всё равно FAIL-CAL-MBON, но карта считается на тонкой сетке.
+    # V1b-4.4 says "stage-1 admissible points", and V1b-4.5 defines
+    # admissibility as the conjunction of the fraction and MBON constraints.
+    # The bounding box is built from the FRACTION constraint alone: otherwise,
+    # with an empty MBON constraint, stage 2 would not exist at all, and the
+    # "grid exhaustion" stopping rule would be replaced by stopping at the
+    # coarse grid. This reading is declared before the run; if the region is
+    # empty the outcome is FAIL-CAL-MBON regardless, but the map is still
+    # computed on the fine grid.
     ok = [p for p in stage1 if passes_fraction(p)]
     if not ok:
         return []
     sc = [p["pn_kc_scale"] for p in ok]
     gs = [p["g_apl_rel"] for p in ok if p["g_apl_rel"] > 0]
-    s_lo, s_hi = min(sc) / 2.0, max(sc) * 2.0          # шаг стадии 1 по масштабу
+    s_lo, s_hi = min(sc) / 2.0, max(sc) * 2.0          # stage-1 step in scale
     if gs:
         g_lo, g_hi = min(gs) / (10 ** 0.5), max(gs) * (10 ** 0.5)
     else:
@@ -827,8 +837,8 @@ def grid_stage2(stage1: list[dict]) -> list[tuple[float, float]]:
     while y <= g_hi * 1.0001:
         out_g.append(y)
         y *= 10 ** 0.125
-    # ноль торможения остаётся в сетке: он есть в стадии 1 и его исключение
-    # сузило бы пространство после просмотра результата
+    # zero inhibition remains in the grid: it is present in stage 1 and
+    # excluding it would narrow the space after seeing the result
     if 0.0 not in out_g and any(p["g_apl_rel"] == 0 for p in ok):
         out_g.insert(0, 0.0)
     return [(a, b) for a in out_s for b in out_g]
@@ -836,10 +846,10 @@ def grid_stage2(stage1: list[dict]) -> list[tuple[float, float]]:
 
 def evaluate_point(neurons, con, odors, *, pn_kc_scale, g_apl_rel, seed_base,
                    kc_mbon_scale: float = 1.0) -> dict:
-    """Величины в точке сетки на заданном наборе запахов.
+    """Quantities at a grid point on the given odor set.
 
-    kc_mbon_scale по умолчанию 1.0: при этом значении ветка масштабирования в
-    build() не исполняется, и точка тождественна точке V1b'.
+    kc_mbon_scale defaults to 1.0: at this value the scaling branch in
+    build() is not executed, and the point is identical to the V1b' point.
     """
     g_abs = g_apl_rel * g_ref_value()
     by = run_panel(neurons, con, odors, pn_kc_scale=pn_kc_scale, g_apl=g_abs,
@@ -858,23 +868,24 @@ def evaluate_point(neurons, con, odors, *, pn_kc_scale, g_apl_rel, seed_base,
 
 
 def passes_fraction(pt: dict) -> bool:
-    """Первая половина V1b-4.5: ограничение по доле отвечающих KC на C.
+    """First half of V1b-4.5: the constraint on the fraction of responding KC on C.
 
-    Отдельная функция, потому что допустимость - конъюнкция, и ограничение
-    MBON считается только для точек, прошедших это: прогон MBON на C стоит
-    вчетверо дороже прогона доли, а недопустимая по доле точка допустимой
-    стать не может.
+    A separate function because admissibility is a conjunction, and the MBON
+    constraint is computed only for points that pass this one: an MBON run on
+    C costs four times as much as a fraction run, and a point inadmissible by
+    fraction cannot become admissible.
     """
     return (F_BAND[0] <= pt["f_mean"] <= F_BAND[1]) and pt["f_max"] <= F_MAX
 
 
 def passes_mbon(pt: dict) -> bool | None:
-    """Вторая половина V1b-4.5: V1b-3.3, V1b-3.4 и V1b-3.5 по запахам C.
+    """Second half of V1b-4.5: V1b-3.3, V1b-3.4 and V1b-3.5 on odors C.
 
-    Возвращает None, если ограничение в точке не вычислялось: это не «прошла»
-    и не «не прошла», а «неизвестно», и допустимой такая точка не считается.
-    Разделение существенно - именно смешение «не вычислено» с «прошла» сделало
-    калибровку V1b не соответствующей спецификации.
+    Returns None if the constraint was not computed at this point: this is
+    neither "pass" nor "fail" but "unknown", and such a point is not
+    considered admissible. The distinction matters - it was precisely the
+    conflation of "not computed" with "pass" that made the V1b calibration
+    fail to match the specification.
     """
     m = pt.get("mbon")
     if m is None:
@@ -883,18 +894,19 @@ def passes_mbon(pt: dict) -> bool | None:
 
 
 def admissible(pt: dict) -> bool:
-    """V1b-4.5: допустимость есть конъюнкция ограничения по доле и MBON на C."""
+    """V1b-4.5: admissibility is the conjunction of the fraction and MBON constraints on C."""
     if not passes_fraction(pt):
         return False
     return passes_mbon(pt) is True
 
 
 def chebyshev_margins(points: list[dict]) -> dict:
-    """Расстояние в шагах сетки до ближайшей недопустимой точки или края.
+    """Distance in grid steps to the nearest inadmissible point or edge.
 
-    Тай-брейк (2) правила V1b-4.6. Метрика Чебышёва на индексах узлов сетки,
-    построенной по самим точкам: край сетки считается недопустимым соседом,
-    поэтому точка в углу получает расстояние 1, а не бесконечность.
+    Tiebreak (2) of rule V1b-4.6. Chebyshev metric on the indices of grid
+    nodes built from the points themselves: the grid edge counts as an
+    inadmissible neighbor, so a point in the corner gets distance 1, not
+    infinity.
     """
     key = lambda p: (round(p["pn_kc_scale"], 10), round(p["g_apl_rel"], 10))
     sx = sorted({key(p)[0] for p in points})
@@ -908,8 +920,8 @@ def chebyshev_margins(points: list[dict]) -> dict:
         i, j = si[a], gi[b]
         d = 1
         while True:
-            # кольцо Чебышёва радиуса d: если в нём есть недопустимый узел или
-            # выход за сетку, расстояние равно d
+            # Chebyshev ring of radius d: if it contains an inadmissible
+            # node or a step outside the grid, the distance is d
             hit = False
             for di in range(-d, d + 1):
                 for dj in range(-d, d + 1):
@@ -932,12 +944,13 @@ def chebyshev_margins(points: list[dict]) -> dict:
 
 
 def choose_point(points: list[dict]) -> dict | None:
-    """V1b-4.6: лексикографический выбор среди допустимых точек стадии 2.
+    """V1b-4.6: lexicographic choice among stage-2 admissible points.
 
-    Выбор идёт по стадии 2, а не по объединению стадий: в V1b объединение дало
-    ту же точку, но правило говорит о стадии 2, и совпадение исходов оправданием
-    расхождения не является. Точки без метки стадии считаются принадлежащими
-    рассматриваемой сетке - так вызывают тесты и разбор одной стадии.
+    The choice is made over stage 2, not over the union of stages: in V1b the
+    union gave the same point, but the rule specifies stage 2, and the outcomes
+    coinciding is not a justification for the discrepancy. Points without a
+    stage label are considered to belong to the grid under consideration -
+    that is how the tests and the single-stage breakdown invoke this.
     """
     stage2 = [p for p in points if p.get("stage") == 2]
     pool_all = stage2 if stage2 else points
@@ -950,8 +963,9 @@ def choose_point(points: list[dict]) -> dict | None:
     defined = [p for p in band if p["s_ab"] == p["s_ab"]]
     pool = defined or band
 
-    # тай-брейк (2) считается по всей сетке, а не по полосе: расстояние меряется
-    # до недопустимых узлов, а они в полосу по определению не входят
+    # tiebreak (2) is computed over the whole grid, not the band: the
+    # distance is measured to inadmissible nodes, and by definition they are
+    # not in the band
     margin = {p.get("chebyshev_to_edge") for p in pool}
     if None in margin:
         m = chebyshev_margins(pool_all)
@@ -966,29 +980,30 @@ def choose_point(points: list[dict]) -> dict | None:
     return min(pool, key=key)
 
 
-# --- оценочные прогоны в выбранной точке (V1b-4.2, V1b-4.7) ------------------
+# --- evaluation runs at the chosen point (V1b-4.2, V1b-4.7) ------------------
 def eval_p14(neurons, con, *, pn_kc_scale: float, g_apl_rel: float,
              seed_base: int = SEED_EVAL, odors: list | None = None) -> dict:
-    """Прогон P14: 14 запахов, импульс 1 с, окно 4 с.
+    """Run P14: 14 odors, 1 s pulse, 4 s window.
 
-    Даёт критерий доли отвечающих KC и критерий перекрытия (оба гейтуются по E,
-    V1b-4.2), плюс отчётные величины V1b-2.3, V1b-2.4, V1b-2.5, V1b-4.9, V1b-4.10
-    и диагностики покрытия раздела 3д.
+    Gives the responding-KC-fraction criterion and the overlap criterion (both
+    gated on E, V1b-4.2), plus the report-only quantities V1b-2.3, V1b-2.4,
+    V1b-2.5, V1b-4.9, V1b-4.10, and the section 3д coverage diagnostics.
     """
     g_abs = g_apl_rel * g_ref_value()
     odors = list(odors or PANEL_ALL)
     by = run_panel(neurons, con, odors, pn_kc_scale=pn_kc_scale,
                    g_apl=g_abs, seed_base=seed_base, extra_windows=((0, 2000),))
-    # Критерии гейтуются по E. Когда набор E в прогон не входит целиком - при
-    # проверке кода или при ограничении допустимости на C - критерии не
-    # вычисляются: слепота E обязана дожить до оценочного прогона (V1b-4.7).
+    # The criteria are gated on E. When set E is not fully included in the
+    # run - during a code check or the admissibility constraint on C - the
+    # criteria are not computed: blindness to E must survive until the
+    # evaluation run (V1b-4.7).
     on_e = [o for o in PANEL_EVAL if o in odors]
     by_e = {o: by[o] for o in on_e}
     cov = kc_coverage(neurons, con)
 
     f_all = {o: kc_fraction(by[o], neurons)["f"] for o in odors}
     if len(on_e) == len(PANEL_EVAL):
-        # полосы те же, что в V1b-4.5; перекрытие - по 28 парам внутри E
+        # bands the same as in V1b-4.5; overlap - over the 28 pairs within E
         f_e = [f_all[o] for o in PANEL_EVAL]
         kc_crit = {"f_mean_E": float(np.mean(f_e)), "f_max_E": float(np.max(f_e)),
                    "band": list(F_BAND), "ceiling": F_MAX,
@@ -996,7 +1011,7 @@ def eval_p14(neurons, con, *, pn_kc_scale: float, g_apl_rel: float,
                                 and max(f_e) <= F_MAX)}
         ov = check_overlap(overlap_pearson(by_e, neurons))
     else:
-        kc_crit = ov = {"not_computed": "набор E в прогон не входит целиком"}
+        kc_crit = ov = {"not_computed": "set E is not fully included in the run"}
     r_all = overlap_pearson(by, neurons)
     ov_all = check_overlap(r_all) if len(odors) >= 3 else {}
 
@@ -1027,11 +1042,12 @@ def eval_p14m(neurons, con, *, pn_kc_scale: float, g_apl_rel: float,
               seed_base: int = SEED_EVAL_M,
               odors: list | None = None, kc_mbon_scale: float = 1.0,
               record_vmax: bool = False, return_by_odor: bool = False) -> dict:
-    """Прогон P14-M: 14 запахов, предъявление 5 с, окно предъявления.
+    """Run P14-M: 14 odors, 5 s presentation, presentation window.
 
-    Набор, на котором определён критерий отклика MBON (V1b-3.1). Дополнительное
-    окно [0; 1 с] нужно для отчётного числа спайков MBON11 рядом со 118 +- 8,3
-    из [29]: стимул до конца первой секунды у импульсов 1 с и 5 с одинаков.
+    The set on which the MBON response criterion (V1b-3.1) is defined. The
+    additional [0; 1 s] window is needed for the report-only MBON11 spike
+    count next to 118 +- 8.3 from [29]: the stimulus up to the end of the
+    first second is the same for the 1 s and 5 s pulses.
     """
     g_abs = g_apl_rel * g_ref_value()
     odors = list(odors or PANEL_ALL)
@@ -1053,12 +1069,12 @@ def eval_p14m(neurons, con, *, pn_kc_scale: float, g_apl_rel: float,
     return rep
 
 
-# --- регрессионный контроль (спецификация, v0.11, критерий (а) и (б)) ---------
+# --- regression control (specification, v0.11, criterion (а) and (б)) ---------
 def regression_substrate(neurons: pd.DataFrame, con: pd.DataFrame) -> dict:
-    """При выключенных подменах субстрат обязан совпасть с V1a побитово."""
+    """With substitutions off, the substrate must match V1a bitwise."""
     role = dict(zip(neurons.root_id, neurons.mb_role))
     kept, n_masked = apply_dan_mask(con, role)
-    off = con  # подмены выключены: маска не применяется
+    off = con  # substitutions off: the mask is not applied
     same_edges = len(off) == len(con) and n_masked > 0
     return {"n_edges_total": int(len(con)),
             "n_edges_with_mask": int(len(kept)),
@@ -1069,7 +1085,7 @@ def regression_substrate(neurons: pd.DataFrame, con: pd.DataFrame) -> dict:
 
 
 def config_hash(cfg: dict, exclude: tuple = ()) -> str:
-    """Хэш конфига с исключением объявленных ключей (критерий (б))."""
+    """Config hash excluding the declared keys (criterion (б))."""
     d = {k: v for k, v in sorted(cfg.items()) if k not in exclude}
     return hashlib.sha256(json.dumps(d, sort_keys=True,
                                      ensure_ascii=False).encode("utf-8")).hexdigest()
@@ -1082,32 +1098,32 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--odor", default="pentyl acetate")
     ap.add_argument("--scale", type=float, default=1.0, help="pn_kc_scale")
-    ap.add_argument("--gapl", type=float, default=1.0, help="g_apl в единицах g_ref")
+    ap.add_argument("--gapl", type=float, default=1.0, help="g_apl in units of g_ref")
     ap.add_argument("--no-dan-mask", action="store_true")
     ap.add_argument("--no-graded-apl", action="store_true")
     ap.add_argument("--codegen", default="numpy", choices=["numpy", "cython"],
-                    help="генератор кода Brian 2; cython требует окружения MSVC")
+                    help="Brian 2 code generation target; cython requires an MSVC environment")
     ap.add_argument("--cache", default="",
-                    help="каталог кэша cython (свой на процесс при параллельном запуске)")
+                    help="cython cache directory (separate per process for parallel runs)")
     ap.add_argument("--evaluate", action="store_true",
-                    help="прогон P14 в точке: доля KC, перекрытие и диагностики")
+                    help="run P14 at the point: KC fraction, overlap, and diagnostics")
     ap.add_argument("--evaluate-mbon", action="store_true",
-                    help="прогон P14-M в точке: критерий отклика MBON (V1b-3.1)")
+                    help="run P14-M at the point: MBON response criterion (V1b-3.1)")
     ap.add_argument("--empty", action="store_true",
-                    help="пустое предъявление: спонтанная частота (V1b-4.10)")
+                    help="empty presentation: spontaneous rate (V1b-4.10)")
     ap.add_argument("--apl0", action="store_true",
-                    help="прогон P14 при g_APL = 0 на зёрнах оценки (V1b-2.5)")
+                    help="run P14 with g_APL = 0 on the evaluation seeds (V1b-2.5)")
     ap.add_argument("--panel", default="all", choices=["all", "cal", "eval"],
-                    help="набор запахов прогона; cal - проверка кода "
-                         "без расходования слепоты набора E")
+                    help="odor panel for the run; cal checks the code "
+                         "without spending panel E's blindness")
     ap.add_argument("--grid", type=int, default=0,
-                    help="калибровка: сколько точек стадии 1 прогнать (0 - не запускать)")
+                    help="calibration: how many stage 1 points to run (0 - do not run)")
     ap.add_argument("--regression", action="store_true",
-                    help="контроль (а) и (б): субстрат и хэши конфигов")
+                    help="control (а) and (б): substrate and config hashes")
     ap.add_argument("--trials", action="store_true",
-                    help="полный протокол: 6 предъявлений и доля отвечающих KC")
+                    help="full protocol: 6 presentations and fraction of responding KC")
     ap.add_argument("--self-test", action="store_true",
-                    help="короткий прогон: собрать сеть и проверить, что она считает")
+                    help="short run: assemble the network and check that it computes")
     a = ap.parse_args()
 
     from brian2 import prefs, ms
@@ -1118,9 +1134,9 @@ def main() -> int:
 
     neurons, con = load_substrate()
     rates = odor_rates(a.odor, neurons)
-    # g_ref = 1/(v_th - v_0): гейн, при котором APL при деполяризации, равной
-    # порогу KC, даёт одну синаптическую единицу за такт (V1b-4.3)
-    g_ref = 1.0 / float((dp["v_th"] - dp["v_0"]) / (0.001 * 1.0))  # в 1/мВ
+    # g_ref = 1/(v_th - v_0): the gain at which APL, at a depolarization
+    # equal to the KC threshold, gives one synaptic unit per tick (V1b-4.3)
+    g_ref = 1.0 / float((dp["v_th"] - dp["v_0"]) / (0.001 * 1.0))  # in 1/mV
     g_abs = a.gapl * g_ref
 
     if a.regression:
@@ -1132,23 +1148,23 @@ def main() -> int:
                       pn_kc_scale=a.scale, g_apl_rel=a.gapl)
         h_off = config_hash(cfg_off, DECLARED_KEYS)
         h_on = config_hash(cfg_on, DECLARED_KEYS)
-        print("контроль (а), субстрат:")
-        print("   рёбер всего %d, снимается маской %d (ожидается 49 316: %s)"
-              % (r["n_edges_total"], r["n_masked"], "да" if r["mask_count_ok"] else "НЕТ"))
-        print("   при выключенных подменах субстрат тождественен: %s"
-              % ("да" if r["substitutions_off_identical"] else "НЕТ"))
-        print("контроль (б), конфиги с исключением объявленных ключей:")
-        print("   выключено: %s" % h_off[:16])
-        print("   включено:  %s" % h_on[:16])
-        print("   равны: %s" % ("да" if h_off == h_on else "НЕТ"))
+        print("control (а), substrate:")
+        print("   total edges %d, removed by mask %d (expected 49,316: %s)"
+              % (r["n_edges_total"], r["n_masked"], "yes" if r["mask_count_ok"] else "NO"))
+        print("   with substitutions off the substrate is identical: %s"
+              % ("yes" if r["substitutions_off_identical"] else "NO"))
+        print("control (б), configs excluding the declared keys:")
+        print("   off: %s" % h_off[:16])
+        print("   on:  %s" % h_on[:16])
+        print("   equal: %s" % ("yes" if h_off == h_on else "NO"))
         print()
-        print("Тождество спайковых поездов на 33 условиях проверяется прогоном")
-        print("v1a_subcircuit.py против замороженных артефактов results/v1a/runs.")
+        print("Identity of spike trains under 33 conditions is checked by running")
+        print("v1a_subcircuit.py against the frozen artifacts in results/v1a/runs.")
         return 0 if (r["mask_count_ok"] and h_off == h_on) else 1
 
     panel = {"all": PANEL_ALL, "cal": PANEL_CAL, "eval": PANEL_EVAL}[a.panel]
-    # на калибровочном наборе идут только проверки кода, поэтому и зёрна
-    # калибровочные: оценочные зёрна расходуются один раз, в прогоне ступени
+    # on the calibration set only code checks are run, so the seeds are
+    # calibration seeds too: evaluation seeds are spent once, in the stage run
     seed_p14 = SEED_CAL if a.panel == "cal" else SEED_EVAL
     seed_p14m = SEED_CAL_M if a.panel == "cal" else SEED_EVAL_M
 
@@ -1156,34 +1172,34 @@ def main() -> int:
         OUT.mkdir(parents=True, exist_ok=True)
         (OUT / name).write_text(json.dumps(obj, ensure_ascii=False, indent=2),
                                 encoding="utf-8")
-        print("записано: %s" % (OUT / name))
+        print("written: %s" % (OUT / name))
 
     if a.evaluate:
         res = eval_p14(neurons, con, pn_kc_scale=a.scale, g_apl_rel=a.gapl,
                        seed_base=seed_p14, odors=panel)
         kc, ov = res["kc_fraction_criterion_E"], res["overlap_criterion_E_28_pairs"]
         if "not_computed" in kc:
-            print("набор %s: критерии по E не вычисляются (%s)"
+            print("set %s: criteria on E are not computed (%s)"
                   % (a.panel, kc["not_computed"]))
             save("evaluate_p14_%s.json" % a.panel, res)
             return 0
-        print("прогон P14, 14 запахов, pn_kc_scale %.4g, g_apl %.4g g_ref, зёрна %d"
+        print("run P14, 14 odors, pn_kc_scale %.4g, g_apl %.4g g_ref, seeds %d"
               % (a.scale, a.gapl, res["seed_base"]))
-        print("доля отвечающих KC на E: среднее %.4f, максимум %.4f "
-              "(полоса %s, потолок %.2f) -> %s"
+        print("fraction of responding KC on E: mean %.4f, max %.4f "
+              "(band %s, ceiling %.2f) -> %s"
               % (kc["f_mean_E"], kc["f_max_E"], F_BAND, F_MAX,
-                 "выполнен" if kc["pass"] else "НЕ ВЫПОЛНЕН"))
-        print("перекрытие по E: r(PA,BA) %.3f, r(PA,EL) %.3f, r(BA,EL) %.3f"
+                 "satisfied" if kc["pass"] else "NOT SATISFIED"))
+        print("overlap on E: r(PA,BA) %.3f, r(PA,EL) %.3f, r(BA,EL) %.3f"
               % (ov["r_PA_BA"], ov["r_PA_EL"], ov["r_BA_EL"]))
-        print("   порядок %s, разделение %.3f (>= %.2f) %s, потолок %s -> %s"
+        print("   order %s, separation %.3f (>= %.2f) %s, ceiling %s -> %s"
               % (ov["order_ok"], ov["separation"], OVERLAP_SEP_MIN,
                  ov["separation_ok"], ov["ceiling_ok"],
-                 "выполнен" if ov["pass"] else "НЕ ВЫПОЛНЕН"))
+                 "satisfied" if ov["pass"] else "NOT SATISFIED"))
         sp = res["spikes_per_response_V1b_4_9_4_10"]
-        print("спайков за ответ: KCab %.2f (эталон %.1f), KCa'b' %.2f, KCg %.2f"
+        print("spikes per response: KCab %.2f (reference %.1f), KCa'b' %.2f, KCg %.2f"
               % (sp["s_ab"], SPIKES_AB_TARGET, sp["s_apbp"], sp["s_g"]))
         cd = res["coverage_diagnostics"]
-        print("Спирмен(c_i, число запахов ответа) rho %.3f, p %.3g"
+        print("Spearman(c_i, number of odors responded) rho %.3f, p %.3g"
               % (cd["spearman_rho"], cd["spearman_p"]))
         save("evaluate_p14.json", res)
         return 0
@@ -1192,29 +1208,29 @@ def main() -> int:
         res = eval_p14m(neurons, con, pn_kc_scale=a.scale, g_apl_rel=a.gapl,
                         seed_base=seed_p14m, odors=panel)
         t = res["T38"]
-        print("прогон P14-M, 14 запахов, предъявление %d мс, pn_kc_scale %.4g, "
-              "g_apl %.4g g_ref, зёрна %d"
+        print("run P14-M, 14 odors, %d ms presentation, pn_kc_scale %.4g, "
+              "g_apl %.4g g_ref, seeds %d"
               % (M_PULSE_MS, a.scale, a.gapl, res["seed_base"]))
         if t["missing"]:
-            print("типов T38 нет в подсхеме: %s" % ", ".join(t["missing"]))
-        print("%-8s %10s %10s %10s %8s" % ("тип", "R_t, Гц", "max", "min", "MD"))
+            print("T38 types not in the subcircuit: %s" % ", ".join(t["missing"]))
+        print("%-8s %10s %10s %10s %8s" % ("type", "R_t, Hz", "max", "min", "MD"))
         for name in T38:
             d = t["per_type"].get(name)
             if d is None:
                 continue
             print("%-8s %10.3f %10.3f %10.3f %8.3f"
                   % (name, d["R_t"], d["max"], d["min"], d["MD"]))
-        print("пол >= %.1f Гц у всех шести: %s" % (MBON_FLOOR_HZ, t["floor_ok"]))
-        print("потолок <= %.0f Гц у всех шести: %s" % (MBON_CEIL_HZ, t["ceiling_ok"]))
-        print("MD >= %.2f у %d типов (нужно %d): %s"
+        print("floor >= %.1f Hz for all six: %s" % (MBON_FLOOR_HZ, t["floor_ok"]))
+        print("ceiling <= %.0f Hz for all six: %s" % (MBON_CEIL_HZ, t["ceiling_ok"]))
+        print("MD >= %.2f for %d types (need %d): %s"
               % (MBON_MD_MIN, t["n_md_ok"], MBON_MD_TYPES, t["md_ok"]))
-        print("критерий V1b-3.1: %s" % ("выполнен" if t["pass"] else "НЕ ВЫПОЛНЕН"))
+        print("criterion V1b-3.1: %s" % ("satisfied" if t["pass"] else "NOT SATISFIED"))
         md = res["md_subsets"]
-        print("медиана MD по %d пятизапаховым подмножествам: %.3f (эталон 0,27)"
+        print("median MD over %d five-odor subsets: %.3f (reference 0.27)"
               % (md["n_subsets"], md["median_over_types"]))
         p11 = res["MBON11_spikes_first_second"]
-        print("MBON11 за первую секунду: среднее по 14 запахам %.2f спайка "
-              "на клетку (эталон [29] 118 +- 8,3; стимулы разные)"
+        print("MBON11 over the first second: mean over 14 odors %.2f spikes "
+              "per cell (reference [29] 118 +- 8.3; different stimuli)"
               % p11["mean_over_odors"])
         save("evaluate_p14m_%s.json" % a.panel, res)
         return 0
@@ -1222,36 +1238,37 @@ def main() -> int:
     if a.empty:
         res = empty_presentation(neurons, con, pn_kc_scale=a.scale,
                                  g_apl_rel=a.gapl, seed_base=SEED_EMPTY)
-        print("пустое предъявление, pn_kc_scale %.4g, g_apl %.4g g_ref, зёрна %s"
+        print("empty presentation, pn_kc_scale %.4g, g_apl %.4g g_ref, seeds %s"
               % (a.scale, a.gapl, res["seeds"]))
-        print("спайков во всей подсхеме %d, из них KC %d"
+        print("spikes in the whole subcircuit %d, of which KC %d"
               % (res["n_spikes_subcircuit"], res["n_spikes_kc"]))
-        print("спонтанная частота KC %.4f Гц (эталон [46] 0,1 +- 0,4)"
+        print("spontaneous KC rate %.4f Hz (reference [46] 0.1 +- 0.4)"
               % res["spontaneous_rate_hz"])
-        print("доля KC, которых правило V1b-2.1-2.2 сочло бы отвечающими: %.4f"
+        print("fraction of KC that rule V1b-2.1-2.2 would deem responding: %.4f"
               % res["f_responding_empty"])
         save("evaluate_empty.json", res)
         return 0
 
     if a.apl0:
-        # V1b-2.5: сверка парная по реализации входа, поэтому зёрна оценочные
+        # V1b-2.5: the reconciliation is paired by input realization, so the seeds are evaluation seeds
         res = eval_p14(neurons, con, pn_kc_scale=a.scale, g_apl_rel=0.0,
                        seed_base=seed_p14, odors=panel)
-        print("прогон P14 при g_APL = 0, pn_kc_scale %.4g, зёрна %d"
+        print("run P14 at g_APL = 0, pn_kc_scale %.4g, seeds %d"
               % (a.scale, res["seed_base"]))
         for o in panel:
-            print("   %-28s S_P %.4f, доля отвечающих %.4f"
+            print("   %-28s S_P %.4f, fraction responding %.4f"
                   % (o, res["sparseness_V1b_2_5"][o], res["kc_fraction_by_odor"][o]))
         save("evaluate_apl0_%s.json" % a.panel, res)
         return 0
 
     if a.grid:
-        # Отсев по доле, не калибровка. Ограничение MBON здесь не считается,
-        # поэтому допустимость по V1b-4.5 не определена и точка не выбирается.
-        # Калибровка ступени идёт только через run_v1b_grid.py: она шардится,
-        # считает обе половины V1b-4.5 и пишет артефакт стадии.
+        # Screening by fraction, not calibration. The MBON constraint is not
+        # computed here, so admissibility per V1b-4.5 is undefined and no
+        # point is chosen. The stage calibration runs only through
+        # run_v1b_grid.py: it shards, computes both halves of V1b-4.5, and
+        # writes the stage artifact.
         pts = grid_stage1()[:a.grid]
-        print("отсев по доле на сетке стадии 1: %d точек из %d (не калибровка)"
+        print("screening by fraction on the stage-1 grid: %d points of %d (not calibration)"
               % (len(pts), len(grid_stage1())))
         done = []
         for k, (sc, g) in enumerate(pts, 1):
@@ -1261,15 +1278,15 @@ def main() -> int:
             done.append(pt)
             print("  [%d/%d] scale %.4g, g %.4g -> f̄ %.4f, f_max %.4f, s_ab %.2f%s"
                   % (k, len(pts), sc, g, pt["f_mean"], pt["f_max"], pt["s_ab"],
-                     "  прошла по доле" if passes_fraction(pt) else ""))
+                     "  passed by fraction" if passes_fraction(pt) else ""))
         OUT.mkdir(parents=True, exist_ok=True)
-        # отдельное имя: артефакт калибровки этой веткой не перезаписывается
+        # separate name: the calibration artifact is not overwritten by this branch
         (OUT / "fraction_screen_stage1.json").write_text(
             json.dumps(done, ensure_ascii=False, indent=2), encoding="utf-8")
         print()
-        print("прошли по доле: %d из %d. Допустимость по V1b-4.5 не определена:"
+        print("passed by fraction: %d of %d. Admissibility per V1b-4.5 is undefined:"
               % (sum(1 for p in done if passes_fraction(p)), len(done)))
-        print("ограничение MBON на C не вычислялось. Выбор точки — run_v1b_grid.py.")
+        print("the MBON constraint on C was not computed. Point selection — run_v1b_grid.py.")
         return 0
 
     if a.trials:
@@ -1278,11 +1295,11 @@ def main() -> int:
                        seeds=seeds, dan_mask=not a.no_dan_mask,
                        graded_apl=not a.no_graded_apl)
         kf = kc_fraction(res, neurons)
-        print("запах %r, pn_kc_scale %.4g, g_apl %.4g g_ref, зёрна %s"
+        print("odor %r, pn_kc_scale %.4g, g_apl %.4g g_ref, seeds %s"
               % (a.odor, a.scale, a.gapl, seeds))
-        print("доля отвечающих KC (>=1 спайк, >=3 из 6): %.4f  (знаменатель %d)"
+        print("fraction of responding KC (>=1 spike, >=3 of 6): %.4f  (denominator %d)"
               % (kf["f"], kf["n_kc_denominator"]))
-        print("таблица чувствительности:")
+        print("sensitivity table:")
         for key in sorted(kf["sensitivity"]):
             print("   %-14s %.4f" % (key, kf["sensitivity"][key]))
         OUT.mkdir(parents=True, exist_ok=True)
@@ -1297,11 +1314,11 @@ def main() -> int:
         dan_mask=not a.no_dan_mask, graded_apl=not a.no_graded_apl,
         rates=rates)
 
-    print("подсхема: ядро %d, APL %d (градуальный: %s)"
+    print("subcircuit: core %d, APL %d (graded: %s)"
           % (st["n_core"], st["n_apl"], not a.no_graded_apl))
-    print("рёбра ядра %d, снято маской DAN %d, вход APL %d, выход APL %d"
+    print("core edges %d, removed by DAN mask %d, APL input %d, APL output %d"
           % (st["n_edges_core"], st["n_masked"], st["n_apl_in"], st["n_apl_out"]))
-    print("стимулируемых PN %d, запах %r, pn_kc_scale %.4g, g_apl %.4g (%.4g g_ref)"
+    print("stimulated PN %d, odor %r, pn_kc_scale %.4g, g_apl %.4g (%.4g g_ref)"
           % (st["n_poisson"], a.odor, a.scale, g_abs, a.gapl))
 
     dur = (T_ON_MS + T_PULSE_MS + 200) if a.self_test else T_RUN_MS
@@ -1312,12 +1329,12 @@ def main() -> int:
     kc = df[df.role == "Kenyon_Cell"]
     resp = int((kc.n_spikes >= KC_SPIKE_THRESHOLD).sum())
     print()
-    print("спайков всего: %d" % int(df.n_spikes.sum()))
-    print("KC с >=1 спайком: %d из %d (%.1f %%)"
+    print("spikes total: %d" % int(df.n_spikes.sum()))
+    print("KC with >=1 spike: %d of %d (%.1f%%)"
           % (resp, len(kc), 100.0 * resp / len(kc)))
     for r in ("MBON", "DAN", "PN"):
         s = df[df.role == r]
-        print("%-4s: активных %d из %d, средняя частота активных %.1f Гц"
+        print("%-4s: active %d of %d, mean rate of active %.1f Hz"
               % (r, int((s.n_spikes > 0).sum()), len(s),
                  s.loc[s.n_spikes > 0, "rate_hz"].mean() if (s.n_spikes > 0).any() else 0.0))
 

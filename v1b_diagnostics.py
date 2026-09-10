@@ -1,22 +1,24 @@
 # -*- coding: utf-8 -*-
-"""Диагностика механизма для ступени V1b: почему MBON молчат в допустимой полосе.
+# Output strings are deliberately Russian: this script must reproduce the
+# committed report byte-for-byte.
+"""Mechanism diagnostics for stage V1b: why MBONs are silent in the admissible band.
 
-Вне ступени. Ни один критерий здесь не вычисляется и ни один параметр по
-результатам не выбирается: назначение - разделить причины молчания MBON,
-обнаруженного после калибровки режима B. Запускается в выбранной точке
-калибровки (pn_kc_scale = 8, g_apl = 3,1623 g_ref) и в точках допустимой
-полосы, известных из артефактов калибровки.
+Outside the stage. No criterion is computed here and no parameter is chosen
+from the results: the purpose is to separate the causes of MBON silence
+found after calibrating regime B. Run at the chosen calibration point
+(pn_kc_scale = 8, g_apl = 3,1623 g_ref) and at the points of the admissible
+band known from the calibration artifacts.
 
-Одна из проверок снимает рёбра APL->MBON - подмену, которой в ступени нет.
-Она введена только для разделения причин и обозначена как таковая; её результат
-ослабляет альтернативное объяснение (торможение APL на MBON), а не поддерживает
-желаемое.
+One of the checks removes the APL->MBON edges - a substitution that is not
+in the stage. It is introduced only to separate causes and is marked as
+such; its result weakens the alternative explanation (APL inhibition on
+MBON), not the desired one.
 
-Набор запахов - калибровочный: оценочный набор E остаётся слепым до прогона
-ступени (V1b-4.7).
+The odor set is the calibration one: the evaluation set E stays blind until
+the stage run (V1b-4.7).
 
-Запуск:  msvc_run.bat v1b_diagnostics.py --all
-         msvc_run.bat v1b_diagnostics.py --band --cause --weights --edges
+Run:  msvc_run.bat v1b_diagnostics.py --all
+      msvc_run.bat v1b_diagnostics.py --band --cause --weights --edges
 """
 from __future__ import annotations
 
@@ -30,11 +32,11 @@ import numpy as np
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-# выбранная точка калибровки V1b и точки допустимой полосы, ведущие к ней
+# the chosen V1b calibration point and the admissible-band points leading to it
 POINT = (8.0, 3.16228)
 BAND = [(3.3636, 0.74989), (4.0, 1.0), (4.7568, 1.3335),
         (5.6569, 1.7783), (6.7272, 2.3714), (8.0, 3.16228)]
-ODOR = "2-heptanone"          # калибровочный набор, слепота E не расходуется
+ODOR = "2-heptanone"          # calibration set; E's blindness is not spent
 N_TRIALS_DIAG = 2
 
 
@@ -44,7 +46,7 @@ def _apl_to_mbon(con, role, apl_ids):
 
 
 def band_scan(V, neurons, con, role, seeds) -> list:
-    """Отклик MBON вдоль допустимой полосы при тайминге M."""
+    """MBON response along the admissible band at timing M."""
     out = []
     print("Отклик MBON вдоль допустимой полосы (тайминг M, %s, %d пробы)"
           % (ODOR, len(seeds)))
@@ -71,7 +73,7 @@ def band_scan(V, neurons, con, role, seeds) -> list:
 
 
 def cause_split(V, neurons, con, role, apl_ids, seeds) -> dict:
-    """Три условия в выбранной точке: разделить торможение и скудный вход KC."""
+    """Three conditions at the chosen point: separate inhibition from a scarce KC input."""
     drop = _apl_to_mbon(con, role, apl_ids)
     sc, g = POINT
     conds = [("как есть", con, g),
@@ -110,7 +112,7 @@ def cause_split(V, neurons, con, role, apl_ids, seeds) -> dict:
 
 
 def inhibition_weights(V, neurons, con, role, apl_ids) -> dict:
-    """Суммарный вес градуального узла на клетку, по ролям."""
+    """Total graded-node weight per cell, by role."""
     from model import default_params as dp
     g_abs = POINT[1] * V.g_ref_value()
     out_edges = con[con.Presynaptic_ID.isin(apl_ids)]
@@ -136,10 +138,11 @@ def inhibition_weights(V, neurons, con, role, apl_ids) -> dict:
 
 
 def edge_counts(con, role) -> dict:
-    """Рёбра, определяющие сепарабельность третьей ручки (множитель KC->MBON).
+    """Edges that determine separability of the third knob (the KC->MBON multiplier).
 
-    Если у градуального узла APL нет входа от MBON, множитель KC->MBON на KC не
-    влияет и калибруется одномерно; иначе связь замыкается через APL.
+    If the graded node APL has no input from MBON, the KC->MBON multiplier on
+    KC has no effect and calibrates one-dimensionally; otherwise the link
+    closes through APL.
     """
     pre, post = con.Presynaptic_ID.map(role), con.Postsynaptic_ID.map(role)
     pairs = [("MBON", "APL"), ("Kenyon_Cell", "APL"), ("PN", "APL"),

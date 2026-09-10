@@ -1,42 +1,42 @@
-# Окружение — воспроизводится из requirements.txt
+# Environment — reproduced from requirements.txt
 .venv/
 __pycache__/
 *.pyc
 
-# --- Сторонние данные и код -------------------------------------------------
-# Не редистрибутируем: у всего есть канонический источник. Подробности — DATA.md.
-# Комментарии здесь только на отдельных строках: в .gitignore хвостовой
-# комментарий частью шаблона, а не комментарием.
+# --- Third-party data and code -----------------------------------------------
+# Not redistributed: everything has a canonical source. Details — DATA.md.
+# Comments here live on their own lines only: in .gitignore a trailing
+# comment is part of the pattern, not a comment.
 
-# Архивы Zenodo 10998457 (920 МБ), CC BY 4.0:
+# Zenodo 10998457 archives (920 MB), CC BY 4.0:
 data/
 
-# Клон philshiu/Drosophila_brain_model (370 МБ): MIT-код плюс коннектом FlyWire
-# под CC BY-NC 4.0. Вендоринг распространил бы ограничение NC на весь репозиторий.
+# Clone of philshiu/Drosophila_brain_model (370 MB): MIT code plus the FlyWire connectome
+# under CC BY-NC 4.0. Vendoring it would spread the NC restriction over the whole repo.
 Drosophila_brain_model/
 
-# --- Выходы прогонов --------------------------------------------------------
-# Сырые спайки и логи: воспроизводимы, крупные, и по нашему прочтению наследуют
-# CC BY-NC 4.0 от данных FlyWire как производный материал. Мелкие сводки
-# (rate.csv, rate_std.csv, mn9.json, эталон) в git идут — они сюда не подпадают.
+# --- Run outputs --------------------------------------------------------
+# Raw spikes and logs: reproducible, large, and by our reading inherit
+# CC BY-NC 4.0 from the FlyWire data as derived material. The small summaries
+# (rate.csv, rate_std.csv, mn9.json, the reference) go into git — they don't fall under this.
 results/**/*.parquet
 results/**/*.log
 results/diag/
 
-# Кэш скомпилированных вставок Cython: воспроизводится компилятором.
+# Cache of compiled Cython inserts: reproduced by the compiler.
 .cython_cache/
 
-# --- Локальный мусор --------------------------------------------------------
+# --- Local clutter --------------------------------------------------------
 *.tmp
 *.part
 .DS_Store
 Thumbs.db
 
-# шарды калибровки V1b - состояние для возобновления прогона; все их точки
-# целиком входят в собранные calibration_stage*.json, которые версионируются
+# V1b calibration shards - state for resuming a run; all their points
+# are fully contained in the assembled calibration_stage*.json, which is versioned
 results/v1b/calibration_stage*.shard*.json
 
-# шарды ступени V1c - то же самое: их точки целиком входят в собранный
-# v1c_grid.json. Карты расстояния до порога по шардам подпадают под правило
-# results/**/*.parquet выше вместе с собранной картой.
+# V1c stage shards - same idea: their points are fully contained in the assembled
+# v1c_grid.json. Per-shard distance-to-threshold maps fall under the
+# results/**/*.parquet rule above along with the assembled map.
 results/v1c/v1c_grid.shard*.json

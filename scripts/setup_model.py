@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-"""Клонировать модель Shiu et al. на зафиксированный коммит.
+"""Clone the Shiu et al. model at a pinned commit.
 
-Репозиторий не вендорится: он содержит данные коннектома FlyWire под CC BY-NC 4.0,
-и редистрибуция распространила бы ограничение NC на весь стенд (DATA.md, раздел 1).
+The repository is not vendored: it contains FlyWire connectome data under CC BY-NC 4.0,
+and redistribution would spread the NC restriction over the entire testbed (DATA.md, section 1).
 
-Данные коннектома лежат внутри клона (86 МБ parquet для v630, 100 МБ для v783) —
-внешний архив, о котором говорит его Readme, скачивать не нужно.
+The connectome data lives inside the clone (86 MB parquet for v630, 100 MB for v783) —
+the external archive its Readme mentions does not need to be downloaded.
 
-Запуск:  python scripts/setup_model.py
+Run:  python scripts/setup_model.py
 """
 from __future__ import annotations
 
@@ -29,30 +29,30 @@ def run(args: list[str], cwd: Path | None = None) -> str:
 
 def main() -> int:
     if not DST.exists():
-        print("Клонируем %s -> %s" % (URL, DST.name))
+        print("Cloning %s -> %s" % (URL, DST.name))
         run(["git", "clone", URL, str(DST)])
     else:
-        print("%s уже есть" % DST.name)
+        print("%s already present" % DST.name)
 
     head = run(["git", "rev-parse", "HEAD"], cwd=DST)
     if head != PIN:
-        print("HEAD %s != зафиксированного %s; переключаемся" % (head[:12], PIN[:12]))
+        print("HEAD %s != pinned %s; switching" % (head[:12], PIN[:12]))
         run(["git", "fetch", "origin"], cwd=DST)
         run(["git", "checkout", PIN], cwd=DST)
         head = run(["git", "rev-parse", "HEAD"], cwd=DST)
 
     dirty = run(["git", "status", "--porcelain"], cwd=DST)
     print("HEAD: %s" % head)
-    print("Локальные правки: %s" % ("НЕТ (как и должно быть)" if not dirty else dirty))
+    print("Local changes: %s" % ("NONE (as expected)" if not dirty else dirty))
 
     missing = [
         n for n in ("model.py", "utils.py", "2023_03_23_connectivity_630_final.parquet")
         if not (DST / n).exists()
     ]
     if missing:
-        print("Не хватает файлов: %s" % ", ".join(missing))
+        print("Missing files: %s" % ", ".join(missing))
         return 1
-    print("Модель готова к запуску.")
+    print("Model is ready to run.")
     return 0
 
 
